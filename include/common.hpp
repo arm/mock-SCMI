@@ -32,7 +32,6 @@ typedef enum _astl_value_type_t {
   ASTL_VALUE_FLOAT32 = 6,  //!< 32bit float
   ASTL_VALUE_FLOAT64 = 7,  //!< 64bit float (double)
   ASTL_VALUE_BOOL8   = 8,  //!< 8bit boolean
-  ASTL_VALUE_STRING  = 9,  //!< String
 
   ASTL_VALUE_UNKNOWN = 0xFFFFFFFF,  //!< Unknown
 } astl_value_type_t;
@@ -50,7 +49,6 @@ typedef union _astl_value_t {
   float    fp32;  //!< 32bits float for FLOAT32
   double   fp64;  //!< 64bits float for FLAAT64
   bool     b8;    //!< 8bits boolean for BOOL8
-  char*    str;   //!< 64bits pointer to string for STRING
 } astl_value_t;
 
 inline astl_value_type_t ToValueType(const std::string& str) {
@@ -74,9 +72,6 @@ inline astl_value_type_t ToValueType(const std::string& str) {
   }
   if (str == "BOOL8") {
     return ASTL_VALUE_BOOL8;
-  }
-  if (str == "STRING") {
-    return ASTL_VALUE_STRING;
   }
   return ASTL_VALUE_UNKNOWN;
 }
