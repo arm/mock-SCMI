@@ -24,6 +24,12 @@ echo "✅ ASTL_MOCKSYSFS_TLM_JSON_PATH = ${ASTL_MOCKSYSFS_TLM_JSON_PATH}"
 
 TIMEOUT=30 # Maximum seconds to wait for guid
 PATTERN_READY="eccf4f7c-d1b1-47f0-9d23-159f6d38b661"
+SKIP_CODE=77
+
+if [[ ! -e /dev/fuse || ! -r /dev/fuse || ! -w /dev/fuse ]]; then
+	echo "⚠️  Skipping MockSysfs test: /dev/fuse is unavailable or lacks rw permissions"
+	exit "${SKIP_CODE}"
+fi
 
 if [ $# -lt 2 ]; then
 	echo "❌ Error!  You must pass one or more commands to this script to run" >/dev/stderr
@@ -81,7 +87,25 @@ else
 	exit 1
 fi
 
-wait_for "${SYSFS_LOG}" "MockSysfs startup" "${PATTERN_READY}"
+if ! wait_for "${SYSFS_LOG}" "MockSysfs startup" "${PATTERN_READY}"; then
+	# In constrained environments, FUSE is present but cannot be used.
+	# Treat this as a skipped test instead of a hard failure.
+	if grep -qF "failed to open /dev/fuse: Permission denied" "${SYSFS_LOG}"; then
+		echo "⚠️  Skipping MockSysfs test: /dev/fuse permission denied in this environment"
+		exit "${SKIP_CODE}"
+	fi
+	echo "❌ Error!  MockSysfs startup pattern was not detected. See log: ${SYSFS_LOG}" >/dev/stderr
+	exit 1
+fi
+
+if ! ps -p ${SYSFS_PROCESS} >/dev/null; then
+	if grep -qF "failed to open /dev/fuse: Permission denied" "${SYSFS_LOG}"; then
+		echo "⚠️  Skipping MockSysfs test: process exited after startup due /dev/fuse permission denial"
+		exit "${SKIP_CODE}"
+	fi
+	echo "❌ Error!  MockSysfs process exited unexpectedly after startup. See log: ${SYSFS_LOG}" >/dev/stderr
+	exit 1
+fi
 
 echo 'Start of test output...'
 
@@ -97,6 +121,10 @@ sleep 0.5
 if kill -SIGTERM ${SYSFS_PROCESS}; then
 	echo "✅ Sent SIGTERM sysfs process to gracefully kill it"
 else
+	if grep -qF "failed to open /dev/fuse: Permission denied" "${SYSFS_LOG}"; then
+		echo "⚠️  Skipping MockSysfs test: process could not be terminated because /dev/fuse is denied"
+		exit "${SKIP_CODE}"
+	fi
 	echo "❌ Error!  Failed to send kill signal to sysfs process with PID: ${SYSFS_PROCESS}" >/dev/stderr
 	exit 1
 fi
