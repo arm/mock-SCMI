@@ -202,7 +202,7 @@ auto BuildTelemetryDesFiles(SCMITelemetryTarget& tlm, FileSystemNode* telemetry)
 
     // TODO(ASTL-116) - Handle all other _astl_value_type_t
     event_dir->AddChild(FileSystemNode::CreateFile(
-        "value", std::format("{} {:016x}\n", ToRaw(data_event->last_timestamp_), data_event->last_value_.ui64),
+        "value", std::format("{} {:016x}\n", data_event->GetScaledTimestamp(), data_event->last_value_.ui64),
         FileAccess::READ_ONLY, event_dir.get(), ProtocolType::SCMI_TELEMETRY));
 
     event_dir->AddChild(FileSystemNode::CreateFile("compo_instance_id", std::to_string(data_event->compo_instance_id_),
@@ -221,7 +221,7 @@ auto BuildTelemetryDesFiles(SCMITelemetryTarget& tlm, FileSystemNode* telemetry)
                                                    FileAccess::READ_ONLY, event_dir.get(),
                                                    ProtocolType::SCMI_TELEMETRY));
 
-    event_dir->AddChild(FileSystemNode::CreateFile("tstamp_exp", data_event->tstamp_exp_ ? "1\n" : "0\n",
+    event_dir->AddChild(FileSystemNode::CreateFile("tstamp_rate", std::to_string(data_event->tstamp_rate_) + "\n",
                                                    FileAccess::READ_ONLY, event_dir.get(),
                                                    ProtocolType::SCMI_TELEMETRY));
 
@@ -328,7 +328,7 @@ auto GetTelemetryFile(const std::string& name) -> TelemetryFile {
       {"compo_type",                    TelemetryFile::COMPO_TYPE                   },
       {"instance_id",                   TelemetryFile::INSTANCE_ID                  },
       {"persistent",                    TelemetryFile::PERSISTENT                   },
-      {"tstamp_exp",                    TelemetryFile::TSTAMP_EXP                   },
+      {"tstamp_rate",                   TelemetryFile::TSTAMP_RATE                  },
       {"type",                          TelemetryFile::TYPE                         },
       {"unit",                          TelemetryFile::UNIT                         },
       {"unit_exp",                      TelemetryFile::UNIT_EXP                     },
@@ -585,7 +585,7 @@ auto HandleProtocolTelemetryRead(const FileSystemNode* node) -> std::string {
         UpdateEventByInterval(event.get(), now_ms, interval_ms);
 
         // Append latest timestamp if enabled, else 0
-        result += event->tstamp_enable_ ? ToRawString(event->last_timestamp_.time_since_epoch()) + ": " : "0: ";
+        result += event->tstamp_enable_ ? std::to_string(event->GetScaledTimestamp()) + ": " : "0: ";
         result += std::format("0x{:04x} ", static_cast<unsigned int>(event->id_));
 
         // TODO(ASTL-116) - Handle all other _astl_value_type_t
@@ -658,6 +658,13 @@ auto HandleProtocolTelemetryRead(const FileSystemNode* node) -> std::string {
       return std::to_string(static_cast<int>(data_event->tstamp_enable_));
     }
 
+    case TelemetryFile::TSTAMP_RATE: {
+      data_event_id_t data_event_id =
+          static_cast<data_event_id_t>(std::stoul(node->GetParent()->GetName(), nullptr, kHexRadix));
+      DataEvent* data_event = tlm.GetDataEventById(data_event_id);
+      return std::to_string(data_event->tstamp_rate_) + "\n";
+    }
+
     case TelemetryFile::VALUE: {
       // Retrieve DE id from the parent's name (hexadecimal conversion)
       data_event_id_t data_event_id =
@@ -683,7 +690,7 @@ auto HandleProtocolTelemetryRead(const FileSystemNode* node) -> std::string {
 
       // TODO(ASTL-116) - Handle all other _astl_value_type_t
       if (data_event->tstamp_enable_) {
-        return std::format("{} {:016x}\n", ToRaw(now.time_since_epoch()), data_event->last_value_.ui64);
+        return std::format("{} {:016x}\n", data_event->GetScaledTimestamp(), data_event->last_value_.ui64);
       }
       return std::format("0 {:016x}\n", data_event->last_value_.ui64);
     }
@@ -705,7 +712,7 @@ auto HandleProtocolTelemetryRead(const FileSystemNode* node) -> std::string {
         event->last_value_ = event->Generate();
 
         // Append latest timestamp if enabled, else 0
-        result += event->tstamp_enable_ ? ToRawString(event->last_timestamp_.time_since_epoch()) + ": " : "0: ";
+        result += event->tstamp_enable_ ? std::to_string(event->GetScaledTimestamp()) + ": " : "0: ";
         result += std::format("0x{:04x} ", static_cast<unsigned int>(event->id_));
 
         // TODO(ASTL-116) - Handle all other _astl_value_type_t

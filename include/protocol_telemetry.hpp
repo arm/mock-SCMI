@@ -33,7 +33,7 @@ enum class TelemetryFile {
   COMPO_TYPE,
   INSTANCE_ID,
   PERSISTENT,
-  TSTAMP_EXP,
+  TSTAMP_RATE,
   TYPE,
   UNIT,
   UNIT_EXP,
@@ -114,8 +114,9 @@ class DataEvent {
   DataEvent& operator=(DataEvent&&)      = delete;
   DataEvent(data_event_id_t data_event_id, bool enable, bool tstamp_enable, _astl_value_t last_value,
             _astl_value_type_t value_type, std::chrono::system_clock::time_point last_timestamp,
-            uint32_t compo_instance_id, uint32_t compo_type, uint32_t instance_id, bool persistent, bool tstamp_exp,
-            uint32_t type, std::string unit, std::string unit_exp, std::optional<group_id_t> group_id = std::nullopt)
+            uint32_t compo_instance_id, uint32_t compo_type, uint32_t instance_id, bool persistent,
+            uint32_t tstamp_rate, uint32_t type, std::string unit, std::string unit_exp,
+            std::optional<group_id_t> group_id = std::nullopt)
       : id_(data_event_id),
         enable_(enable),
         tstamp_enable_(tstamp_enable),
@@ -126,7 +127,7 @@ class DataEvent {
         compo_type_(compo_type),
         instance_id_(instance_id),
         persistent_(persistent),
-        tstamp_exp_(tstamp_exp),
+        tstamp_rate_(tstamp_rate),
         type_(type),
         unit_(std::move(unit)),
         unit_exp_(std::move(unit_exp)),
@@ -134,6 +135,17 @@ class DataEvent {
   virtual ~DataEvent() = default;
 
   virtual astl_value_t Generate() = 0;
+
+  /**
+   * @brief Gets the timestamp scaled by tstamp_rate_.
+   * @return uint64_t Timestamp in ticks based on tstamp_rate_ (KHz).
+   */
+  uint64_t GetScaledTimestamp() const {
+    // Convert timestamp to ticks based on tstamp_rate_ (in KHz)
+    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(last_timestamp_.time_since_epoch()).count();
+    constexpr auto khz_per_hz = 1000ULL;
+    return static_cast<uint64_t>(millis) * tstamp_rate_ / khz_per_hz;
+  }
 
   data_event_id_t                       id_;
   bool                                  enable_;
@@ -146,7 +158,7 @@ class DataEvent {
   uint32_t    compo_type_;
   uint32_t    instance_id_;
   bool        persistent_;
-  bool        tstamp_exp_;
+  uint32_t    tstamp_rate_;  // how fast tstamp counts up, in KHz
   uint32_t    type_;
   std::string unit_;
   std::string unit_exp_;

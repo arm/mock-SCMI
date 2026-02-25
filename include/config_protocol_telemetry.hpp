@@ -26,10 +26,10 @@ class RandomDataEvent : public DataEvent {
   RandomDataEvent(data_event_id_t data_event_id, bool enable, bool tstamp_enable, astl_value_t last_value,
                   astl_value_type_t value_type, std::chrono::system_clock::time_point last_timestamp,
                   uint32_t compo_instance_id, uint32_t compo_type, uint32_t instance_id, bool persistent,
-                  bool tstamp_exp, uint32_t type, std::string unit, std::string unit_exp, uint64_t rand_min,
+                  uint32_t tstamp_rate, uint32_t type, std::string unit, std::string unit_exp, uint64_t rand_min,
                   uint64_t rand_max, std::optional<group_id_t> group = std::nullopt)
       : DataEvent(data_event_id, enable, tstamp_enable, last_value, value_type, last_timestamp, compo_instance_id,
-                  compo_type, instance_id, persistent, tstamp_exp, type, std::move(unit), std::move(unit_exp), group),
+                  compo_type, instance_id, persistent, tstamp_rate, type, std::move(unit), std::move(unit_exp), group),
         rand_min_(rand_min),
         rand_max_(rand_max) {}
 
@@ -53,11 +53,11 @@ class CsvDataEvent : public DataEvent {
  public:
   CsvDataEvent(data_event_id_t data_event_id, bool enable, bool tstamp_enable, astl_value_t last_value,
                astl_value_type_t value_type, std::chrono::system_clock::time_point last_timestamp,
-               uint32_t compo_instance_id, uint32_t compo_type, uint32_t instance_id, bool persistent, bool tstamp_exp,
-               uint32_t type, std::string unit, std::string unit_exp, const std::string& csv_path, uint8_t column,
-               std::optional<group_id_t> group = std::nullopt)
+               uint32_t compo_instance_id, uint32_t compo_type, uint32_t instance_id, bool persistent,
+               uint32_t tstamp_rate, uint32_t type, std::string unit, std::string unit_exp, const std::string& csv_path,
+               uint8_t column, std::optional<group_id_t> group = std::nullopt)
       : DataEvent(data_event_id, enable, tstamp_enable, last_value, value_type, last_timestamp, compo_instance_id,
-                  compo_type, instance_id, persistent, tstamp_exp, type, std::move(unit), std::move(unit_exp), group),
+                  compo_type, instance_id, persistent, tstamp_rate, type, std::move(unit), std::move(unit_exp), group),
         csv_gen_(csv_path, column) {}
 
   astl_value_t Generate() override {
@@ -97,7 +97,7 @@ inline std::vector<std::unique_ptr<DataEvent>> CreateTelemetryDataEvents(std::st
     const auto              compo_type        = static_cast<uint32_t>(data_event["compo_type"]);
     const auto              instance_id       = static_cast<uint32_t>(data_event["instance_id"]);
     const auto              persistent        = static_cast<bool>(data_event["persistent"]);
-    const auto              tstamp_exp        = static_cast<bool>(data_event["tstamp_exp"]);
+    const auto              tstamp_rate       = static_cast<uint32_t>(data_event["tstamp_rate"]);
     const auto              type              = static_cast<uint32_t>(data_event["type"]);
     const auto              unit              = static_cast<std::string>(data_event["unit"]);
     const auto              unit_exp          = static_cast<std::string>(data_event["unit_exp"]);
@@ -117,7 +117,7 @@ inline std::vector<std::unique_ptr<DataEvent>> CreateTelemetryDataEvents(std::st
         const uint64_t rand_max = params.at("max").get<uint64_t>();
         events.push_back(std::make_unique<RandomDataEvent>(
             data_event_id, enable, tstamp_enable, last_value, value_type, last_timestamp, compo_instance_id, compo_type,
-            instance_id, persistent, tstamp_exp, type, unit, unit_exp, rand_min, rand_max, group_id));
+            instance_id, persistent, tstamp_rate, type, unit, unit_exp, rand_min, rand_max, group_id));
         break;
       }
       case 2: {  // CsvDataEvent
@@ -128,7 +128,7 @@ inline std::vector<std::unique_ptr<DataEvent>> CreateTelemetryDataEvents(std::st
 
         events.push_back(std::make_unique<CsvDataEvent>(
             data_event_id, enable, tstamp_enable, last_value, value_type, last_timestamp, compo_instance_id, compo_type,
-            instance_id, persistent, tstamp_exp, type, unit, unit_exp, csv_file_path, column, group_id));
+            instance_id, persistent, tstamp_rate, type, unit, unit_exp, csv_file_path, column, group_id));
         break;
       }
       default:

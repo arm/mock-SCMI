@@ -9,7 +9,7 @@
 ./arm_telemetry/tlm-0/des/0x0000/instance_id
 ./arm_telemetry/tlm-0/des/0x0000/persistent
 ./arm_telemetry/tlm-0/des/0x0000/tstamp_enable
-./arm_telemetry/tlm-0/des/0x0000/tstamp_exp
+./arm_telemetry/tlm-0/des/0x0000/tstamp_rate
 ./arm_telemetry/tlm-0/des/0x0000/type
 ./arm_telemetry/tlm-0/des/0x0000/unit
 ./arm_telemetry/tlm-0/des/0x0000/unit_exp
@@ -20,7 +20,7 @@
 ./arm_telemetry/tlm-0/des/0x0016/instance_id
 ./arm_telemetry/tlm-0/des/0x0016/persistent
 ./arm_telemetry/tlm-0/des/0x0016/tstamp_enable
-./arm_telemetry/tlm-0/des/0x0016/tstamp_exp
+./arm_telemetry/tlm-0/des/0x0016/tstamp_rate
 ./arm_telemetry/tlm-0/des/0x0016/type
 ./arm_telemetry/tlm-0/des/0x0016/unit
 ./arm_telemetry/tlm-0/des/0x0016/unit_exp
@@ -31,7 +31,7 @@
 ./arm_telemetry/tlm-0/des/0x1A68/instance_id
 ./arm_telemetry/tlm-0/des/0x1A68/persistent
 ./arm_telemetry/tlm-0/des/0x1A68/tstamp_enable
-./arm_telemetry/tlm-0/des/0x1A68/tstamp_exp
+./arm_telemetry/tlm-0/des/0x1A68/tstamp_rate
 ./arm_telemetry/tlm-0/des/0x1A68/type
 ./arm_telemetry/tlm-0/des/0x1A68/unit
 ./arm_telemetry/tlm-0/des/0x1A68/unit_exp
@@ -42,7 +42,7 @@
 ./arm_telemetry/tlm-0/des/0x7A9B/instance_id
 ./arm_telemetry/tlm-0/des/0x7A9B/persistent
 ./arm_telemetry/tlm-0/des/0x7A9B/tstamp_enable
-./arm_telemetry/tlm-0/des/0x7A9B/tstamp_exp
+./arm_telemetry/tlm-0/des/0x7A9B/tstamp_rate
 ./arm_telemetry/tlm-0/des/0x7A9B/type
 ./arm_telemetry/tlm-0/des/0x7A9B/unit
 ./arm_telemetry/tlm-0/des/0x7A9B/unit_exp
@@ -53,7 +53,7 @@
 ./arm_telemetry/tlm-0/des/0x8C3D/instance_id
 ./arm_telemetry/tlm-0/des/0x8C3D/persistent
 ./arm_telemetry/tlm-0/des/0x8C3D/tstamp_enable
-./arm_telemetry/tlm-0/des/0x8C3D/tstamp_exp
+./arm_telemetry/tlm-0/des/0x8C3D/tstamp_rate
 ./arm_telemetry/tlm-0/des/0x8C3D/type
 ./arm_telemetry/tlm-0/des/0x8C3D/unit
 ./arm_telemetry/tlm-0/des/0x8C3D/unit_exp
@@ -64,7 +64,7 @@
 ./arm_telemetry/tlm-0/des/0x9E4F/instance_id
 ./arm_telemetry/tlm-0/des/0x9E4F/persistent
 ./arm_telemetry/tlm-0/des/0x9E4F/tstamp_enable
-./arm_telemetry/tlm-0/des/0x9E4F/tstamp_exp
+./arm_telemetry/tlm-0/des/0x9E4F/tstamp_rate
 ./arm_telemetry/tlm-0/des/0x9E4F/type
 ./arm_telemetry/tlm-0/des/0x9E4F/unit
 ./arm_telemetry/tlm-0/des/0x9E4F/unit_exp
@@ -101,7 +101,7 @@
 ./arm_telemetry/tlm-1/des/0x0000/instance_id
 ./arm_telemetry/tlm-1/des/0x0000/persistent
 ./arm_telemetry/tlm-1/des/0x0000/tstamp_enable
-./arm_telemetry/tlm-1/des/0x0000/tstamp_exp
+./arm_telemetry/tlm-1/des/0x0000/tstamp_rate
 ./arm_telemetry/tlm-1/des/0x0000/type
 ./arm_telemetry/tlm-1/des/0x0000/unit
 ./arm_telemetry/tlm-1/des/0x0000/unit_exp
@@ -112,7 +112,7 @@
 ./arm_telemetry/tlm-1/des/0x0016/instance_id
 ./arm_telemetry/tlm-1/des/0x0016/persistent
 ./arm_telemetry/tlm-1/des/0x0016/tstamp_enable
-./arm_telemetry/tlm-1/des/0x0016/tstamp_exp
+./arm_telemetry/tlm-1/des/0x0016/tstamp_rate
 ./arm_telemetry/tlm-1/des/0x0016/type
 ./arm_telemetry/tlm-1/des/0x0016/unit
 ./arm_telemetry/tlm-1/des/0x0016/unit_exp
@@ -123,7 +123,7 @@
 ./arm_telemetry/tlm-1/des/0x1A68/instance_id
 ./arm_telemetry/tlm-1/des/0x1A68/persistent
 ./arm_telemetry/tlm-1/des/0x1A68/tstamp_enable
-./arm_telemetry/tlm-1/des/0x1A68/tstamp_exp
+./arm_telemetry/tlm-1/des/0x1A68/tstamp_rate
 ./arm_telemetry/tlm-1/des/0x1A68/type
 ./arm_telemetry/tlm-1/des/0x1A68/unit
 ./arm_telemetry/tlm-1/des/0x1A68/unit_exp
@@ -134,7 +134,7 @@
 ./arm_telemetry/tlm-1/des/0x7A9B/instance_id
 ./arm_telemetry/tlm-1/des/0x7A9B/persistent
 ./arm_telemetry/tlm-1/des/0x7A9B/tstamp_enable
-./arm_telemetry/tlm-1/des/0x7A9B/tstamp_exp
+./arm_telemetry/tlm-1/des/0x7A9B/tstamp_rate
 ./arm_telemetry/tlm-1/des/0x7A9B/type
 ./arm_telemetry/tlm-1/des/0x7A9B/unit
 ./arm_telemetry/tlm-1/des/0x7A9B/unit_exp
@@ -145,7 +145,7 @@
 ./arm_telemetry/tlm-1/des/0x8C3D/instance_id
 ./arm_telemetry/tlm-1/des/0x8C3D/persistent
 ./arm_telemetry/tlm-1/des/0x8C3D/tstamp_enable
-./arm_telemetry/tlm-1/des/0x8C3D/tstamp_exp
+./arm_telemetry/tlm-1/des/0x8C3D/tstamp_rate
 ./arm_telemetry/tlm-1/des/0x8C3D/type
 ./arm_telemetry/tlm-1/des/0x8C3D/unit
 ./arm_telemetry/tlm-1/des/0x8C3D/unit_exp
@@ -156,7 +156,7 @@
 ./arm_telemetry/tlm-1/des/0x9E4F/instance_id
 ./arm_telemetry/tlm-1/des/0x9E4F/persistent
 ./arm_telemetry/tlm-1/des/0x9E4F/tstamp_enable
-./arm_telemetry/tlm-1/des/0x9E4F/tstamp_exp
+./arm_telemetry/tlm-1/des/0x9E4F/tstamp_rate
 ./arm_telemetry/tlm-1/des/0x9E4F/type
 ./arm_telemetry/tlm-1/des/0x9E4F/unit
 ./arm_telemetry/tlm-1/des/0x9E4F/unit_exp

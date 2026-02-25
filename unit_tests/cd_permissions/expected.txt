@@ -55,7 +55,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
@@ -67,7 +67,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
@@ -79,7 +79,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
@@ -91,7 +91,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
@@ -103,7 +103,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
@@ -115,7 +115,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
@@ -168,7 +168,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
@@ -180,7 +180,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
@@ -192,7 +192,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
@@ -204,7 +204,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
@@ -216,7 +216,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
@@ -228,7 +228,7 @@ enable
 instance_id
 persistent
 tstamp_enable
-tstamp_exp
+tstamp_rate
 type
 unit
 unit_exp
