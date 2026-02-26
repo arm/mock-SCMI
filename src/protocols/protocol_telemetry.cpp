@@ -490,6 +490,10 @@ auto HandleProtocolTelemetryWrite(const FileSystemNode* node, const std::string&
           }
         }
       } else {
+        if (!parent) {
+          std::cerr << "Can't enable node with no parent node\n";
+          return ErrorCode::MOUNTPOINT_MISSING;
+        }
         data_event_id_t data_event_id = static_cast<data_event_id_t>(std::stoul(parent->GetName(), nullptr, kHexRadix));
         if (auto* event = tlm.GetDataEventById(data_event_id)) {
           event->enable_ = (std::atoi(value.c_str()) != 0);
@@ -636,7 +640,9 @@ auto HandleProtocolTelemetryRead(const FileSystemNode* node) -> std::string {
         const auto& groups = tlm.GetGroups().at(group_id.value());
         return groups->enable_ ? "1" : "0";
       }
-
+      if (!parent) {
+        return "";
+      }
       data_event_id_t data_event_id = static_cast<data_event_id_t>(std::stoul(parent->GetName(), nullptr, kHexRadix));
       if (auto* event = tlm.GetDataEventById(data_event_id)) {
         return event->enable_ ? "1" : "0";
