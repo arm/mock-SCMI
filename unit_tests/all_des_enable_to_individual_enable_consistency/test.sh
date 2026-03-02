@@ -1,5 +1,9 @@
 #!/bin/env bash
 
+# SPDX-FileCopyrightText: 2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # Note that ./arm_telemetry/tlm-0/all_des_enable is write only.
 # Even if you're able to read a value from it, that value is undefined and should not be checked during testing
 

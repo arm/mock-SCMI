@@ -1,5 +1,9 @@
 #!/bin/env bash
 
+# SPDX-FileCopyrightText: 2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # This script is a wrapper for Sysfs unit tests
 # It launches a MockSysfs executable at a unique mount point
 # then runs whatever command is passed as an argument
