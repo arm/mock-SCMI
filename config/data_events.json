@@ -22,6 +22,27 @@
       }
     },
     {
+      "data_event_id": "0x9441",
+      "group_id": 0,
+      "enable": false,
+      "tstamp_enable": true,
+      "last_value": 0,
+      "value_type": "UINT64",
+      "persistent": true,
+      "tstamp_rate": 1,
+      "type": 1,
+      "unit": "Celsius",
+      "unit_exp": "-3",
+      "compo_instance_id": 101,
+      "compo_type": 201,
+      "instance_id": 301,
+      "generator": {
+        "type_id": 1,
+        "params": { "min": 30000, "max": 40000 }
+      }
+    },
+ 
+    {
       "data_event_id": "0x0016",
       "group_id": 0,
       "enable": false,
