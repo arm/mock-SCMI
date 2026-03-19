@@ -145,10 +145,10 @@ class DataEvent {
    * @return uint64_t Timestamp in ticks based on tstamp_rate_ (KHz).
    */
   uint64_t GetScaledTimestamp() const {
-    // Convert timestamp to ticks based on tstamp_rate_ (in KHz)
+    // Convert elapsed milliseconds to SCMI timestamp ticks at tstamp_rate_ KHz.
+    // A rate in KHz means "ticks per millisecond", so 1 ms at 5 KHz advances by 5 ticks.
     auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(last_timestamp_.time_since_epoch()).count();
-    constexpr auto khz_per_hz = 1000ULL;
-    return static_cast<uint64_t>(millis) * tstamp_rate_ / khz_per_hz;
+    return static_cast<uint64_t>(millis) * tstamp_rate_;
   }
 
   data_event_id_t                       id_;
