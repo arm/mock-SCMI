@@ -18,24 +18,25 @@ enable_testing()
 
 add_test(
   NAME toolsMocksysfsFind
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests/unit_test_fixture.sh $<TARGET_FILE:MockSysfs>
-          ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests/find/expected.txt ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests/find/test.sh)
+  COMMAND
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockSysfs>
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/find/expected.txt ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/find/command.sh)
 set_tests_properties(toolsMocksysfsFind PROPERTIES LABELS "mocksysfs" SKIP_RETURN_CODE 77)
 
 add_test(
   NAME toolsMocksysfsCdPermissions
   COMMAND
-    ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests/unit_test_fixture.sh $<TARGET_FILE:MockSysfs>
-    ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests/cd_permissions/expected.txt
-    ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests/cd_permissions/test.sh)
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockSysfs>
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/cd_permissions/expected.txt
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/cd_permissions/command.sh)
 set_tests_properties(toolsMocksysfsCdPermissions PROPERTIES LABELS "mocksysfs" SKIP_RETURN_CODE 77)
 
 add_test(
   NAME toolsMocksysfsAllDesEnableToIndividualEnableConsistency
   COMMAND
-    ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests/unit_test_fixture.sh $<TARGET_FILE:MockSysfs>
-    ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests/all_des_enable_to_individual_enable_consistency/expected.txt
-    ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests/all_des_enable_to_individual_enable_consistency/test.sh)
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockSysfs>
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/all_des_enable_to_individual_enable_consistency/expected.txt
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/all_des_enable_to_individual_enable_consistency/command.sh)
 set_tests_properties(toolsMocksysfsAllDesEnableToIndividualEnableConsistency PROPERTIES LABELS "mocksysfs"
                                                                                         SKIP_RETURN_CODE 77)
 

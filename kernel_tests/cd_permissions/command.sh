@@ -10,9 +10,9 @@ START_DIR=$(pwd)
 echo '--- Directory List ---'
 find . -type d | sort | tee "${TEST_SCRATCH}/directory_list.txt"
 
-for CUR_DIR in $(cat "${TEST_SCRATCH}/directory_list.txt"); do
+cat "${TEST_SCRATCH}/directory_list.txt" | while IFS= read -r CUR_DIR; do
 	cd "${START_DIR}"
 	echo "--- ${CUR_DIR} ---"
 	cd "${CUR_DIR}"
-	ls | sort
+	find . -maxdepth 1 -mindepth 1 | sed 's#^\./##' | sort
 done

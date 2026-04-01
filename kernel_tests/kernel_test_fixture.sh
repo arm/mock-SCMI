@@ -8,8 +8,6 @@
 # It launches a MockSysfs executable at a unique mount point
 # then runs whatever command is passed as an argument
 
-# TODO - https://jira.arm.com/browse/ASTL-74 - Add code coverage for MockSysfs
-
 set -eu -o pipefail
 
 # --- Configure env for MockSysfs JSON path ---
@@ -41,9 +39,9 @@ if [ $# -lt 2 ]; then
 	exit 1
 fi
 
-SYSFS_EXECUTABLE=$(realpath $1)
+SYSFS_EXECUTABLE=$(realpath "$1")
 shift
-EXPECTED_OUTPUT=$(realpath $1)
+EXPECTED_OUTPUT=$(realpath "$1")
 shift
 
 if [ -f "${SYSFS_EXECUTABLE}" ]; then
@@ -68,7 +66,7 @@ MOUNT_POINT="${TMP_DIR}/mount" # Directory where sysfs will be mounted
 ACTUAL_OUTPUT="${TMP_DIR}/actual.txt"
 export TEST_SCRATCH="${TMP_DIR}/scratch"
 
-mkdir ${MOUNT_POINT} ${TEST_SCRATCH}
+mkdir "${MOUNT_POINT}" "${TEST_SCRATCH}"
 
 wait_for() {
 	local FILE="$1" DESC="$2" PATTERN="$3"
@@ -80,7 +78,7 @@ wait_for() {
 }
 
 # If valgrind reports an "unhandled dwarf2 abbrev form code 0x25" error, try compiling with g++ instead of clang
-valgrind --log-file="${VALGRIND_LOG}" --leak-check=full --show-leak-kinds=all --track-origins=yes ${SYSFS_EXECUTABLE} -f -s ${MOUNT_POINT} &>${SYSFS_LOG} &
+valgrind --log-file="${VALGRIND_LOG}" --leak-check=full --show-leak-kinds=all --track-origins=yes "${SYSFS_EXECUTABLE}" -f -s "${MOUNT_POINT}" &>"${SYSFS_LOG}" &
 # ${SYSFS_EXECUTABLE} -f -s ${MOUNT_POINT} &> ${SYSFS_LOG} &
 SYSFS_PROCESS="$!"
 
@@ -114,8 +112,8 @@ fi
 echo 'Start of test output...'
 
 # Launch whatever command we want to use as our unit test
-cd ${MOUNT_POINT}
-$@ |& tee ${ACTUAL_OUTPUT}
+cd "${MOUNT_POINT}"
+$@ |& tee "${ACTUAL_OUTPUT}"
 
 # Give valgrind time to flushs its output.
 # Without this, the `wait` below will hang because the `kill` command doesn't really terminate the process and/or its children.
@@ -153,15 +151,15 @@ else
 	exit 1
 fi
 
-if diff -u ${EXPECTED_OUTPUT} ${ACTUAL_OUTPUT}; then
+if diff -u "${EXPECTED_OUTPUT}" "${ACTUAL_OUTPUT}"; then
 	echo "✅ Actual output matches expected output.  Actual output deleted because test was successful.  Expected output = ${EXPECTED_OUTPUT}"
 else
 	echo "❌ Error!  Actual test output does not match expected output.  Actual output = ${ACTUAL_OUTPUT}  Expected output = ${EXPECTED_OUTPUT}" >/dev/stderr
 	exit 1
 fi
 
-rm -rf ${TMP_DIR}
-if [ ! -d ${TMP_DIR} ]; then
+rm -rf "${TMP_DIR}"
+if [ ! -d "${TMP_DIR}" ]; then
 	echo "✅ Cleaned up temporary directory: ${TMP_DIR}"
 else
 	echo "❌ Error!  Temporary directory not fully removed: ${TMP_DIR}" >/dev/stderr
