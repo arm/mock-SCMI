@@ -33,11 +33,11 @@ typedef enum _astl_value_type_t {
   ASTL_VALUE_UINT16  = 1,  //!< Unsigned 16bit integer (short)
   ASTL_VALUE_UINT32  = 2,  //!< Unsigned 32bit integer
   ASTL_VALUE_UINT64  = 3,  //!< Unsigned 64bit integer (long)
-  ASTL_VALUE_FLOAT32 = 6,  //!< 32bit float
-  ASTL_VALUE_FLOAT64 = 7,  //!< 64bit float (double)
-  ASTL_VALUE_BOOL8   = 8,  //!< 8bit boolean
+  ASTL_VALUE_FLOAT32 = 4,  //!< 32bit float
+  ASTL_VALUE_FLOAT64 = 5,  //!< 64bit float (double)
+  ASTL_VALUE_BOOL8   = 6,  //!< 8bit boolean
 
-  ASTL_VALUE_UNKNOWN = 0xFFFFFFFF,  //!< Unknown
+  ASTL_VALUE_UNKNOWN = -1,  //!< Unknown
 } astl_value_type_t;
 
 /** Value container. Processing of an astl_value_t should be based on astl_value_type_t
