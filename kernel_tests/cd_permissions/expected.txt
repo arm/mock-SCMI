@@ -3,25 +3,25 @@
 ./arm_telemetry
 ./arm_telemetry/tlm-0
 ./arm_telemetry/tlm-0/des
-./arm_telemetry/tlm-0/des/0x0000
-./arm_telemetry/tlm-0/des/0x0016
-./arm_telemetry/tlm-0/des/0x1A68
-./arm_telemetry/tlm-0/des/0x7A9B
-./arm_telemetry/tlm-0/des/0x8C3D
-./arm_telemetry/tlm-0/des/0x9441
-./arm_telemetry/tlm-0/des/0x9E4F
+./arm_telemetry/tlm-0/des/0x00000000
+./arm_telemetry/tlm-0/des/0x00000016
+./arm_telemetry/tlm-0/des/0x00001A68
+./arm_telemetry/tlm-0/des/0x00007A9B
+./arm_telemetry/tlm-0/des/0x00008C3D
+./arm_telemetry/tlm-0/des/0x00009441
+./arm_telemetry/tlm-0/des/0x00009E4F
 ./arm_telemetry/tlm-0/groups
 ./arm_telemetry/tlm-0/groups/0
 ./arm_telemetry/tlm-0/groups/1
 ./arm_telemetry/tlm-1
 ./arm_telemetry/tlm-1/des
-./arm_telemetry/tlm-1/des/0x0000
-./arm_telemetry/tlm-1/des/0x0016
-./arm_telemetry/tlm-1/des/0x1A68
-./arm_telemetry/tlm-1/des/0x7A9B
-./arm_telemetry/tlm-1/des/0x8C3D
-./arm_telemetry/tlm-1/des/0x9441
-./arm_telemetry/tlm-1/des/0x9E4F
+./arm_telemetry/tlm-1/des/0x00000000
+./arm_telemetry/tlm-1/des/0x00000016
+./arm_telemetry/tlm-1/des/0x00001A68
+./arm_telemetry/tlm-1/des/0x00007A9B
+./arm_telemetry/tlm-1/des/0x00008C3D
+./arm_telemetry/tlm-1/des/0x00009441
+./arm_telemetry/tlm-1/des/0x00009E4F
 ./arm_telemetry/tlm-1/groups
 ./arm_telemetry/tlm-1/groups/0
 ./arm_telemetry/tlm-1/groups/1
@@ -44,14 +44,14 @@ intervals_discrete
 tlm_enable
 version
 --- ./arm_telemetry/tlm-0/des ---
-0x0000
-0x0016
-0x1A68
-0x7A9B
-0x8C3D
-0x9441
-0x9E4F
---- ./arm_telemetry/tlm-0/des/0x0000 ---
+0x00000000
+0x00000016
+0x00001A68
+0x00007A9B
+0x00008C3D
+0x00009441
+0x00009E4F
+--- ./arm_telemetry/tlm-0/des/0x00000000 ---
 compo_instance_id
 compo_type
 enable
@@ -63,7 +63,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-0/des/0x0016 ---
+--- ./arm_telemetry/tlm-0/des/0x00000016 ---
 compo_instance_id
 compo_type
 enable
@@ -75,7 +75,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-0/des/0x1A68 ---
+--- ./arm_telemetry/tlm-0/des/0x00001A68 ---
 compo_instance_id
 compo_type
 enable
@@ -87,7 +87,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-0/des/0x7A9B ---
+--- ./arm_telemetry/tlm-0/des/0x00007A9B ---
 compo_instance_id
 compo_type
 enable
@@ -99,7 +99,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-0/des/0x8C3D ---
+--- ./arm_telemetry/tlm-0/des/0x00008C3D ---
 compo_instance_id
 compo_type
 enable
@@ -111,7 +111,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-0/des/0x9441 ---
+--- ./arm_telemetry/tlm-0/des/0x00009441 ---
 compo_instance_id
 compo_type
 enable
@@ -123,7 +123,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-0/des/0x9E4F ---
+--- ./arm_telemetry/tlm-0/des/0x00009E4F ---
 compo_instance_id
 compo_type
 enable
@@ -170,14 +170,14 @@ intervals_discrete
 tlm_enable
 version
 --- ./arm_telemetry/tlm-1/des ---
-0x0000
-0x0016
-0x1A68
-0x7A9B
-0x8C3D
-0x9441
-0x9E4F
---- ./arm_telemetry/tlm-1/des/0x0000 ---
+0x00000000
+0x00000016
+0x00001A68
+0x00007A9B
+0x00008C3D
+0x00009441
+0x00009E4F
+--- ./arm_telemetry/tlm-1/des/0x00000000 ---
 compo_instance_id
 compo_type
 enable
@@ -189,7 +189,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-1/des/0x0016 ---
+--- ./arm_telemetry/tlm-1/des/0x00000016 ---
 compo_instance_id
 compo_type
 enable
@@ -201,7 +201,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-1/des/0x1A68 ---
+--- ./arm_telemetry/tlm-1/des/0x00001A68 ---
 compo_instance_id
 compo_type
 enable
@@ -213,7 +213,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-1/des/0x7A9B ---
+--- ./arm_telemetry/tlm-1/des/0x00007A9B ---
 compo_instance_id
 compo_type
 enable
@@ -225,7 +225,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-1/des/0x8C3D ---
+--- ./arm_telemetry/tlm-1/des/0x00008C3D ---
 compo_instance_id
 compo_type
 enable
@@ -237,7 +237,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-1/des/0x9441 ---
+--- ./arm_telemetry/tlm-1/des/0x00009441 ---
 compo_instance_id
 compo_type
 enable
@@ -249,7 +249,7 @@ type
 unit
 unit_exp
 value
---- ./arm_telemetry/tlm-1/des/0x9E4F ---
+--- ./arm_telemetry/tlm-1/des/0x00009E4F ---
 compo_instance_id
 compo_type
 enable

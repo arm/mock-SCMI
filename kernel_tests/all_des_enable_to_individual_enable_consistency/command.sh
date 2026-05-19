@@ -9,46 +9,46 @@
 
 echo 'Enable one at a time, then bulk disable'
 echo -n 0 >./arm_telemetry/tlm-0/all_des_enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
-echo -n 1 >./arm_telemetry/tlm-0/des/0x0000/enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo -n 1 >./arm_telemetry/tlm-0/des/0x00000000/enable
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
-echo -n 1 >./arm_telemetry/tlm-0/des/0x0016/enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo -n 1 >./arm_telemetry/tlm-0/des/0x00000016/enable
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
 echo -n 0 >./arm_telemetry/tlm-0/all_des_enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
 echo 'Disable one at a time, then bulk enable'
 echo -n 1 >./arm_telemetry/tlm-0/all_des_enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
-echo -n 0 >./arm_telemetry/tlm-0/des/0x0000/enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo -n 0 >./arm_telemetry/tlm-0/des/0x00000000/enable
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
-echo -n 0 >./arm_telemetry/tlm-0/des/0x0016/enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo -n 0 >./arm_telemetry/tlm-0/des/0x00000016/enable
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
 echo -n 1 >./arm_telemetry/tlm-0/all_des_enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
 echo 'Mix of enables/disables, then bulk disable'
 echo -n 1 >./arm_telemetry/tlm-0/all_des_enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
-echo -n 0 >./arm_telemetry/tlm-0/des/0x0000/enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo -n 0 >./arm_telemetry/tlm-0/des/0x00000000/enable
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
 echo -n 0 >./arm_telemetry/tlm-0/all_des_enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
 echo 'Mix of enables/disables, then bulk enable'
 echo -n 0 >./arm_telemetry/tlm-0/all_des_enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
-echo -n 1 >./arm_telemetry/tlm-0/des/0x0000/enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo -n 1 >./arm_telemetry/tlm-0/des/0x00000000/enable
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -
 
 echo -n 1 >./arm_telemetry/tlm-0/all_des_enable
-echo | cat ./arm_telemetry/tlm-0/des/0x0000/enable ./arm_telemetry/tlm-0/des/0x0016/enable -
+echo | cat ./arm_telemetry/tlm-0/des/0x00000000/enable ./arm_telemetry/tlm-0/des/0x00000016/enable -

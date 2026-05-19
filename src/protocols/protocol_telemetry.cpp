@@ -192,7 +192,7 @@ auto BuildTelemetryDesFiles(SCMITelemetryTarget& tlm, FileSystemNode* telemetry)
   auto des_dir = FileSystemNode::CreateDirectory("des", telemetry, ProtocolType::SCMI_TELEMETRY);
   // For each data event, create its event directory and add files.
   for (const auto& data_event : tlm.GetDataEvents()) {
-    std::string id_str = std::format("0x{:04X}", data_event->id_);
+    std::string id_str = std::format("0x{:08X}", data_event->id_);
 
     auto event_dir = FileSystemNode::CreateDirectory(id_str, des_dir.get(), ProtocolType::SCMI_TELEMETRY);
 
@@ -287,7 +287,7 @@ auto BuildTelemetryGroupFiles(SCMITelemetryTarget& tlm, FileSystemNode* telemetr
     // de specific changes
     for (auto event : group->des_) {
       auto& file_content = composing_des->GetFileContent();
-      file_content += std::format("0x{:04X} ", event);
+      file_content += std::format("0x{:08X} ", event);
     }
 
     if (!composing_des->GetFileContent().empty()) {
