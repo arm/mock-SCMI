@@ -23,8 +23,8 @@
         "all_des_tstamp_enable": true,
         "tlm_enable": true,
         "telemetry_version": "1.0",
-        "data_event_version": "0xCAFEBABECAFEBABECAFEBABEBEEF0000",
-        "data_events_path": "data_events.json",
+        "data_event_version": "0xCAFEBABECAFEBABECAFEBABEBEEF0001",
+        "data_events_path": "data_events_2.json",
         "intervals_discrete": false,
         "update_intervals": [[1,-1],[1,0],[5,0]],
         "active_update_interval": [1,0]

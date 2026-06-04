@@ -80,8 +80,8 @@ inline astl_value_type_t ToValueType(const std::string& str) {
   return ASTL_VALUE_UNKNOWN;
 }
 
-using group_id_t      = uint16_t;
-using data_event_id_t = uint16_t;
+using group_id_t      = uint32_t;
+using data_event_id_t = uint32_t;
 
 }  // namespace mock_sysfs
 

@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "data_events": [
+    {
+      "data_event_id": "0x00010000",
+      "group_id": 0,
+      "enable": false,
+      "tstamp_enable": true,
+      "last_value": 0,
+      "value_type": "UINT64",
+      "persistent": true,
+      "tstamp_rate": 1,
+      "type": 1,
+      "unit": "Celsius",
+      "unit_exp": "none",
+      "compo_instance_id": 101,
+      "compo_type": 201,
+      "instance_id": 301,
+      "generator": {
+        "type_id": 1,
+        "params": { "min": 40, "max": 70 }
+      }
+    },
+    {
+      "data_event_id": "0x00019441",
+      "group_id": 0,
+      "enable": false,
+      "tstamp_enable": true,
+      "last_value": 0,
+      "value_type": "UINT64",
+      "persistent": true,
+      "tstamp_rate": 1,
+      "type": 1,
+      "unit": "Celsius",
+      "unit_exp": "-3",
+      "compo_instance_id": 101,
+      "compo_type": 201,
+      "instance_id": 301,
+      "generator": {
+        "type_id": 1,
+        "params": { "min": 20, "max": 40 }
+      }
+    },
+ 
+    {
+      "data_event_id": "0x00010016",
+      "group_id": 0,
+      "enable": false,
+      "tstamp_enable": true,
+      "last_value": 0,
+      "value_type": "UINT64",
+      "persistent": true,
+      "tstamp_rate": 2,
+      "type": 1,
+      "unit": "Percent",
+      "unit_exp": "none",
+      "compo_instance_id": 102,
+      "compo_type": 202,
+      "instance_id": 302,
+      "generator": {
+        "type_id": 1,
+        "params": { "min": 1, "max": 7 }
+      }
+    },
+
+    {
+      "data_event_id": "0x00017A9B",
+      "group_id": 1,
+      "enable": false,
+      "tstamp_enable": true,
+      "last_value": 40,
+      "value_type": "UINT64",
+      "persistent": true,
+      "tstamp_rate": 3,
+      "type": 1,
+      "unit": "Celsius",
+      "unit_exp": "none",
+      "compo_instance_id": 103,
+      "compo_type": 203,
+      "instance_id": 303,
+      "generator": {
+        "type_id": 2,
+        "params": {
+          "file_path": "SoC_Throttling_Simulation.csv",
+          "column": 1
+        }
+      }
+    },
+    {
+      "data_event_id": "0x00018C3D",
+      "group_id": 1,
+      "enable": false,
+      "tstamp_enable": true,
+      "last_value": 5,
+      "value_type": "UINT64",
+      "persistent": true,
+      "tstamp_rate": 4,
+      "type": 1,
+      "unit": "Count",
+      "unit_exp": "none",
+      "compo_instance_id": 104,
+      "compo_type": 204,
+      "instance_id": 304,
+      "generator": {
+        "type_id": 2,
+        "params": {
+          "file_path": "SoC_Throttling_Simulation.csv",
+          "column": 2
+        }
+      }
+    },
+    {
+      "data_event_id": "0x00019E4F",
+      "group_id": 1,
+      "enable": false,
+      "tstamp_enable": true,
+      "last_value": 500,
+      "value_type": "UINT64",
+      "persistent": true,
+      "tstamp_rate": 5,
+      "type": 1,
+      "unit": "Watts",
+      "unit_exp": "none",
+      "compo_instance_id": 105,
+      "compo_type": 205,
+      "instance_id": 305,
+      "generator": {
+        "type_id": 2,
+        "params": {
+          "file_path": "SoC_Throttling_Simulation.csv",
+          "column": 3
+        }
+      }
+    },
+    {
+      "data_event_id": "0x00011A68",
+      "group_id": 1,
+      "enable": false,
+      "tstamp_enable": true,
+      "last_value": 2000,
+      "value_type": "UINT64",
+      "persistent": true,
+      "tstamp_rate": 6,
+      "type": 1,
+      "unit": "MHz",
+      "unit_exp": "none",
+      "compo_instance_id": 103,
+      "compo_type": 203,
+      "instance_id": 303,
+      "generator": {
+        "type_id": 2,
+        "params": {
+          "file_path": "SoC_Throttling_Simulation.csv",
+          "column": 4
+        }
+      }
+    }
+  ]
+}
