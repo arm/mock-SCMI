@@ -92,7 +92,7 @@ struct UpdateInterval {
 };
 
 struct DesGroup {
-  DesGroup(group_id_t group_id, bool enable, bool tstamp_enable, UpdateInterval intervals)
+  DesGroup(group_id_t group_id, bool enable, bool tstamp_enable, UpdateInterval const& intervals)
       : group_id_(group_id), enable_(enable), tstamp_enable_(tstamp_enable), intervals_(intervals) {}
 
   group_id_t                   group_id_{};
@@ -183,7 +183,7 @@ class SCMITelemetryTarget {
  public:
   SCMITelemetryTarget() = default;
   SCMITelemetryTarget(std::string const& tlm_id, bool all_des_enable, bool all_des_tstamp_enable,
-                      UpdateInterval intervals, bool tlm_enable, std::string version,
+                      UpdateInterval const& intervals, bool tlm_enable, std::string version,
                       std::string de_implementation_version, std::vector<std::unique_ptr<DataEvent>> data_events);
 
   ~SCMITelemetryTarget()                                     = default;

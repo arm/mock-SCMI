@@ -149,7 +149,7 @@ auto GetInitialIntervalValue(const SCMITelemetryTarget& tlm) -> std::string {
   return initial_value;
 }
 
-auto BuildTelemetryTopLevelFiles(SCMITelemetryTarget& tlm, FileSystemNode* telemetry) -> void {
+auto BuildTelemetryTopLevelFiles(SCMITelemetryTarget const& tlm, FileSystemNode* telemetry) -> void {
   telemetry->AddChild(FileSystemNode::CreateFile("all_des_enable",
                                                  std::to_string(static_cast<int>(tlm.GetAllDesEnableFlag())),
                                                  FileAccess::WRITE_ONLY, telemetry, ProtocolType::SCMI_TELEMETRY));
@@ -188,7 +188,7 @@ auto BuildTelemetryTopLevelFiles(SCMITelemetryTarget& tlm, FileSystemNode* telem
                                                  FileAccess::READ_WRITE, telemetry, ProtocolType::SCMI_TELEMETRY));
 };
 
-auto BuildTelemetryDesFiles(SCMITelemetryTarget& tlm, FileSystemNode* telemetry) -> void {
+auto BuildTelemetryDesFiles(SCMITelemetryTarget const& tlm, FileSystemNode* telemetry) -> void {
   auto des_dir = FileSystemNode::CreateDirectory("des", telemetry, ProtocolType::SCMI_TELEMETRY);
   // For each data event, create its event directory and add files.
   for (const auto& data_event : tlm.GetDataEvents()) {
@@ -349,7 +349,7 @@ auto GetTelemetryFile(const std::string& name) -> TelemetryFile {
 }
 
 SCMITelemetryTarget::SCMITelemetryTarget(std::string const& tlm_id, bool all_des_enable, bool all_des_tstamp_enable,
-                                         UpdateInterval intervals, bool tlm_enable, std::string version,
+                                         UpdateInterval const& intervals, bool tlm_enable, std::string version,
                                          std::string                             de_implementation_version,
                                          std::vector<std::unique_ptr<DataEvent>> data_events)
     : all_des_enable_(all_des_enable),
@@ -412,7 +412,7 @@ auto HandleProtocolTelemetryWrite(const FileSystemNode* node, const std::string&
   switch (file_type) {
     case TelemetryFile::ALL_DES_ENABLE:
       if (is_group) {
-        auto& group = tlm.GetGroups().at(group_id.value());
+        const auto& group = tlm.GetGroups().at(group_id.value());
         for (const auto& event : tlm.GetDataEvents()) {
           if (event->group_id_.value() == group_id.value()) {
             event->enable_ = (std::atoi(value.c_str()) != 0);

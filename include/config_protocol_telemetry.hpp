@@ -77,8 +77,8 @@ class CsvDataEvent : public DataEvent {
   CSVDataGenerator csv_gen_;
 };
 
-inline std::vector<std::unique_ptr<DataEvent>> CreateTelemetryDataEvents(std::string const& json_path,
-                                                                         UpdateInterval     interval) {
+inline std::vector<std::unique_ptr<DataEvent>> CreateTelemetryDataEvents(std::string const&    json_path,
+                                                                         UpdateInterval const& interval) {
   std::vector<std::unique_ptr<DataEvent>> events;
 
   std::ifstream data_events_json_file(json_path);

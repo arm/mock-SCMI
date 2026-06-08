@@ -120,21 +120,31 @@ static void LowLevelGetAttr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_inf
   fuse_reply_attr(req, &stbuf, 1.0);
 }
 
-static void LowLevelOpen(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* file_info) {
-  std::cout << "open: ino=" << ino << std::endl;
+static FileSystemNode const* FindRequestedNode(fuse_req_t req, fuse_ino_t ino, NodeType expected_type) {
   FuseUserData* fuse_user_data = static_cast<FuseUserData*>(fuse_req_userdata(req));
 
-  FileSystemNode* node = FindNodeByIno(fuse_user_data->root.get(), ino);
+  FileSystemNode const* node = FindNodeByIno(fuse_user_data->root.get(), ino);
   if (!node) {
     fuse_reply_err(req, ENOENT);
-    return;
+    return nullptr;
   }
 
-  if (node->GetType() == NodeType::DIRECTORY_NODE) {
-    fuse_reply_err(req, EISDIR);
-    return;
+  if (node->GetType() != expected_type) {
+    const auto error_code = (node->GetType() == NodeType::DIRECTORY_NODE) ? EISDIR : ENOTDIR;
+    fuse_reply_err(req, error_code);
+    return nullptr;
   }
 
+  return node;
+}
+
+// cppcheck-suppress constParameterCallback //  (file_info is mutated by callback)
+static void LowLevelOpen(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* file_info) {
+  std::cout << "open: ino=" << ino << std::endl;
+  FileSystemNode const* node = FindRequestedNode(req, ino, NodeType::FILE_NODE);
+  if (!node) {
+    return;
+  }
   fuse_reply_open(req, file_info);
 }
 
@@ -209,18 +219,11 @@ static void LowLevelWrite(fuse_req_t req, fuse_ino_t ino, const char* buf, size_
   fuse_reply_write(req, size);
 }
 
+// cppcheck-suppress constParameterCallback // (file_info is mutated by callback)
 static void LowLevelOpenDir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* file_info) {
   std::cout << "opendir: ino=" << ino << std::endl;
-  FuseUserData* fuse_user_data = static_cast<FuseUserData*>(fuse_req_userdata(req));
-
-  FileSystemNode* node = FindNodeByIno(fuse_user_data->root.get(), ino);
+  FileSystemNode const* node = FindRequestedNode(req, ino, NodeType::DIRECTORY_NODE);
   if (!node) {
-    fuse_reply_err(req, ENOENT);
-    return;
-  }
-
-  if (node->GetType() != NodeType::DIRECTORY_NODE) {
-    fuse_reply_err(req, ENOTDIR);
     return;
   }
   fuse_reply_open(req, file_info);
@@ -231,7 +234,7 @@ static void LowLevelReadDir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t o
   std::cout << "readdir: ino=" << ino << ", size=" << size << ", off=" << off << std::endl;
   FuseUserData* fuse_user_data = static_cast<FuseUserData*>(fuse_req_userdata(req));
 
-  FileSystemNode* dir = FindNodeByIno(fuse_user_data->root.get(), ino);
+  FileSystemNode const* dir = FindNodeByIno(fuse_user_data->root.get(), ino);
   if (!dir || dir->GetType() != NodeType::DIRECTORY_NODE) {
     fuse_reply_err(req, ENOTDIR);
     return;
