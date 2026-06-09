@@ -11,6 +11,8 @@
 set -eu -o pipefail
 
 # --- Configure env for MockSysfs JSON path ---
+
+set -x
 # Script path: astl/tools/mock_sysfs/unit_tests/unit_test_fixture.sh
 # Repo root is three directories up from here.
 MSYS_UNIT_TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -78,8 +80,9 @@ wait_for() {
 }
 
 # If valgrind reports an "unhandled dwarf2 abbrev form code 0x25" error, try compiling with g++ instead of clang
-valgrind --log-file="${VALGRIND_LOG}" --leak-check=full --show-leak-kinds=all --track-origins=yes "${SYSFS_EXECUTABLE}" -f -s "${MOUNT_POINT}" &>"${SYSFS_LOG}" &
-# ${SYSFS_EXECUTABLE} -f -s ${MOUNT_POINT} &> ${SYSFS_LOG} &
+# clear DEBUGINFOD_URLS so that valgrind doesn't attempt to fetch debug symbols from the network, which can cause hangs in constrained environments
+DEBUGINFOD_URLS='' valgrind --log-file="${VALGRIND_LOG}" --leak-check=full --show-leak-kinds=all --track-origins=yes "${SYSFS_EXECUTABLE}" -f -s "${MOUNT_POINT}" &>"${SYSFS_LOG}" &
+#{SYSFS_EXECUTABLE} -f -s ${MOUNT_POINT} &> ${SYSFS_LOG} &
 SYSFS_PROCESS="$!"
 
 if ps -p ${SYSFS_PROCESS} >/dev/null; then
@@ -113,7 +116,7 @@ echo 'Start of test output...'
 
 # Launch whatever command we want to use as our unit test
 cd "${MOUNT_POINT}"
-$@ |& tee "${ACTUAL_OUTPUT}"
+"$@" |& tee "${ACTUAL_OUTPUT}"
 
 # Give valgrind time to flushs its output.
 # Without this, the `wait` below will hang because the `kill` command doesn't really terminate the process and/or its children.

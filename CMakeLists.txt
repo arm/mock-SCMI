@@ -21,7 +21,7 @@ add_test(
   COMMAND
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockSysfs>
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/find/expected.txt ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/find/command.sh)
-set_tests_properties(toolsMocksysfsFind PROPERTIES LABELS "mocksysfs" SKIP_RETURN_CODE 77)
+set_tests_properties(toolsMocksysfsFind PROPERTIES LABELS "integration;mocksysfs" SKIP_RETURN_CODE 77)
 
 add_test(
   NAME toolsMocksysfsCdPermissions
@@ -29,7 +29,7 @@ add_test(
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockSysfs>
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/cd_permissions/expected.txt
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/cd_permissions/command.sh)
-set_tests_properties(toolsMocksysfsCdPermissions PROPERTIES LABELS "mocksysfs" SKIP_RETURN_CODE 77)
+set_tests_properties(toolsMocksysfsCdPermissions PROPERTIES LABELS "integration;mocksysfs" SKIP_RETURN_CODE 77)
 
 add_test(
   NAME toolsMocksysfsAllDesEnableToIndividualEnableConsistency
@@ -37,7 +37,7 @@ add_test(
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockSysfs>
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/all_des_enable_to_individual_enable_consistency/expected.txt
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/all_des_enable_to_individual_enable_consistency/command.sh)
-set_tests_properties(toolsMocksysfsAllDesEnableToIndividualEnableConsistency PROPERTIES LABELS "mocksysfs"
+set_tests_properties(toolsMocksysfsAllDesEnableToIndividualEnableConsistency PROPERTIES LABELS "integration;mocksysfs"
                                                                                         SKIP_RETURN_CODE 77)
 
 target_compile_definitions(MockSysfs PRIVATE FUSE_USE_VERSION=316 # make sure to update scripts/lint.sh if this changes
