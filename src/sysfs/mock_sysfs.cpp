@@ -36,7 +36,7 @@ static void LowLevelInit(void* user_data, struct fuse_conn_info* conn) {
   // Create the absolute root directory.
   fuse_user_data->root = FileSystemNode::CreateDirectory("/");
 
-  InitProtocol(fuse_user_data->root.get());
+  InitProtocol(fuse_user_data->root.get(), fuse_user_data->tlm_json_path);
 
   std::cout << "Mock filesystem initialized! - " << kStartUnitTest << std::endl;
 }

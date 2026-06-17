@@ -12,9 +12,9 @@
 
 namespace mock_sysfs {
 
-auto InitProtocol(FileSystemNode* g_root) -> void {
+auto InitProtocol(FileSystemNode* g_root, const std::optional<std::string>& config_file_path) -> void {
   // Initialize additional protocols here
-  std::unique_ptr<FileSystemNode> telemetry_tree = InitProtocolTelemetry(g_root);
+  std::unique_ptr<FileSystemNode> telemetry_tree = InitProtocolTelemetry(g_root, config_file_path);
   g_root->AddChild(std::move(telemetry_tree));
 }
 

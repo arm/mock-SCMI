@@ -5,6 +5,9 @@
 #ifndef INCLUDE_PROTOCOL_HPP
 #define INCLUDE_PROTOCOL_HPP
 
+#include <optional>
+#include <string>
+
 #include "common.hpp"
 #include "fsnode.hpp"
 
@@ -18,8 +21,9 @@ namespace mock_sysfs {
  * additional protocols.
  *
  * @param g_root Pointer to the root file system node.
+ * @param config_file_path Optional protocol configuration file path from the command line.
  */
-auto InitProtocol(FileSystemNode* g_root) -> void;
+auto InitProtocol(FileSystemNode* g_root, const std::optional<std::string>& config_file_path) -> void;
 
 /**
  * @brief Dispatches the write operation for a file system node based on its protocol.

@@ -10,6 +10,8 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <random>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "common_data_generator.hpp"
@@ -83,7 +85,7 @@ inline std::vector<std::unique_ptr<DataEvent>> CreateTelemetryDataEvents(std::st
 
   std::ifstream data_events_json_file(json_path);
   if (!data_events_json_file) {
-    throw std::runtime_error("Could not open data_events.json");
+    throw std::runtime_error("Could not open data events file: " + json_path);
   }
   const json data_events_json = json::parse(data_events_json_file);
 

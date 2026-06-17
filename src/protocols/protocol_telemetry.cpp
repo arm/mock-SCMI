@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
+#include <filesystem>
 #include <format>
 #include <fstream>
 #include <iostream>
@@ -45,6 +47,19 @@ static std::unordered_map<std::string, std::unique_ptr<SCMITelemetryTarget>>& In
   return tlm_to_target;
 }
 
+static auto ResolveTlmJsonPath(const std::optional<std::string>& cli_tlm_json_path) -> std::string {
+  if (cli_tlm_json_path.has_value()) {
+    return *cli_tlm_json_path;
+  }
+
+  const char* env = std::getenv("ASTL_MOCKSYSFS_TLM_JSON_PATH");
+  if (env == nullptr) {
+    throw std::runtime_error("ASTL_MOCKSYSFS_TLM_JSON_PATH environment variable is not set.");
+  }
+
+  return env;
+}
+
 inline auto UpdateEventByInterval(DataEvent* event, std::chrono::system_clock::time_point now,
                                   std::chrono::milliseconds interval) -> void {
   auto elapsed = now - event->last_timestamp_;
@@ -71,17 +86,15 @@ update_interval_t GetInterval(const std::vector<update_interval_t>& intervals, S
   return *selector(intervals, comp);
 }
 
-auto InitProtocolTelemetry(FileSystemNode* g_root) -> std::unique_ptr<FileSystemNode> {
+auto InitProtocolTelemetry(FileSystemNode* g_root, const std::optional<std::string>& cli_tlm_json_path)
+    -> std::unique_ptr<FileSystemNode> {
   auto& tlm_to_tgt = Instances();
 
-  const char* env = std::getenv("ASTL_MOCKSYSFS_TLM_JSON_PATH");
-  if (env == nullptr) {
-    throw std::runtime_error("ASTL_MOCKSYSFS_TLM_JSON_PATH environment variable is not set.");
-  }
+  const auto tlm_json_path = ResolveTlmJsonPath(cli_tlm_json_path);
 
-  std::ifstream tlm_json_file(env);
+  std::ifstream tlm_json_file(tlm_json_path);
   if (!tlm_json_file) {
-    throw std::runtime_error(std::string("Could not open file: ") + env);
+    throw std::runtime_error("Could not open file: " + tlm_json_path);
   }
   const json tlm_json = json::parse(tlm_json_file);
 
@@ -96,7 +109,7 @@ auto InitProtocolTelemetry(FileSystemNode* g_root) -> std::unique_ptr<FileSystem
     const auto&           telemetry_version     = static_cast<std::string>(settings["telemetry_version"]);
     const auto&           de_version            = static_cast<std::string>(settings["data_event_version"]);
     std::string           raw_data_events_path  = settings.at("data_events_path").get<std::string>();
-    std::filesystem::path data_events_path      = std::filesystem::path(env).parent_path() / raw_data_events_path;
+    std::filesystem::path data_events_path = std::filesystem::path(tlm_json_path).parent_path() / raw_data_events_path;
 
     UpdateInterval update_intervals{};
     for (const auto& interval : settings.at("update_intervals")) {

@@ -5,10 +5,50 @@
 #include <fuse_lowlevel.h>
 #include <fuse_opt.h>
 
+#include <array>
+#include <cstddef>
+#include <cstdlib>
 #include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
 
 #include "common.hpp"
 #include "mock_sysfs.hpp"  // Declares: extern const fuse_lowlevel_ops fuse_ll_ops;
+
+namespace {
+
+struct MockSysfsOptions {
+  char* tlm_json_path = nullptr;
+};
+
+const std::array<fuse_opt, 4> kMockSysfsOptionSpec{
+    {
+     {"-t %s", offsetof(MockSysfsOptions, tlm_json_path), 0},
+     {"--tlm-json-path %s", offsetof(MockSysfsOptions, tlm_json_path), 0},
+     {"--tlm-json-path=%s", offsetof(MockSysfsOptions, tlm_json_path), 0},
+     FUSE_OPT_END, }
+};
+
+auto ToTlmJsonPath(const MockSysfsOptions& options) -> std::optional<std::string> {
+  if (options.tlm_json_path == nullptr) {
+    return std::nullopt;
+  }
+
+  std::string tlm_json_path{options.tlm_json_path};
+  if (!tlm_json_path.empty() && tlm_json_path.front() == '=') {
+    tlm_json_path.erase(0, 1);
+  }
+
+  return tlm_json_path;
+}
+
+auto PrintMockSysfsHelp() -> void {
+  std::cout << "    -t FILE\n";
+  std::cout << "    --tlm-json-path FILE  path to the MockSysfs telemetry JSON configuration\n";
+}
+
+}  // namespace
 
 void CleanFuse(fuse_args* args, fuse_session* fuse_session_handle, fuse_loop_config* config) {
   if (fuse_session_handle) {
@@ -24,10 +64,20 @@ int main(int argc, char* argv[]) {
   int               ret  = -1;
   fuse_args         args = FUSE_ARGS_INIT(argc, argv);
   fuse_cmdline_opts opts{};
+  MockSysfsOptions  mock_sysfs_options{};
   fuse_session*     fuse_session_handle = nullptr;
   fuse_loop_config* config{};
 
+  const int parse_result = fuse_opt_parse(&args, &mock_sysfs_options, kMockSysfsOptionSpec.data(), nullptr);
+  std::unique_ptr<char, decltype(&std::free)> tlm_json_path_raii(mock_sysfs_options.tlm_json_path, std::free);
+  if (parse_result != 0) {
+    CleanFuse(&args, nullptr, config);
+    ret = static_cast<int>(mock_sysfs::ErrorCode::CMDLINE_PARSE_ERROR);
+    return ret;
+  }
+
   if (fuse_parse_cmdline(&args, &opts)) {
+    CleanFuse(&args, nullptr, config);
     ret = static_cast<int>(mock_sysfs::ErrorCode::CMDLINE_PARSE_ERROR);
     return ret;
   }
@@ -36,6 +86,7 @@ int main(int argc, char* argv[]) {
 
   if (opts.show_help) {
     std::cout << "usage: ./MockSysfs [options] <mountpoint>\n\n";
+    PrintMockSysfsHelp();
     fuse_cmdline_help();
     fuse_lowlevel_help();
     CleanFuse(&args, nullptr, config);
@@ -60,6 +111,7 @@ int main(int argc, char* argv[]) {
   }
 
   mock_sysfs::FuseUserData fuse_user_data{};
+  fuse_user_data.tlm_json_path = ToTlmJsonPath(mock_sysfs_options);
 
   fuse_session_handle =
       fuse_session_new(&args, &mock_sysfs::kFuseLowLevelOps, sizeof(mock_sysfs::kFuseLowLevelOps), &fuse_user_data);

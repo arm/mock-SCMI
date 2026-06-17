@@ -8,6 +8,8 @@
 #include <fuse_lowlevel.h>
 
 #include <memory>
+#include <optional>
+#include <string>
 
 #include "fsnode.hpp"
 
@@ -44,6 +46,7 @@ extern const struct fuse_lowlevel_ops kFuseLowLevelOps;
 
 struct FuseUserData {
   std::unique_ptr<FileSystemNode> root;
+  std::optional<std::string>      tlm_json_path;
 };
 
 }  // namespace mock_sysfs

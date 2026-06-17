@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cmath>
 #include <optional>
+#include <string>
 #include <unordered_map>
 
 #include "common.hpp"
@@ -57,9 +58,11 @@ enum class TelemetryFile {
  *
  *
  * @param g_root Pointer to the root file system node under which the telemetry directory will be created.
+ * @param tlm_json_path Optional telemetry JSON path from the command line.
  * @return std::unique_ptr<FileSystemNode> Unique pointer to the telemetry directory node.
  */
-std::unique_ptr<FileSystemNode> InitProtocolTelemetry(FileSystemNode* g_root);
+std::unique_ptr<FileSystemNode> InitProtocolTelemetry(FileSystemNode*                   g_root,
+                                                      const std::optional<std::string>& tlm_json_path);
 
 /**
  * @brief Writes telemetry data for the specified node.
