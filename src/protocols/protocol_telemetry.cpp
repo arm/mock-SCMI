@@ -46,9 +46,9 @@ static auto ResolveTlmJsonPath(const std::optional<std::string>& cli_tlm_json_pa
   return env;
 }
 
-auto InitProtocolTelemetry(FileSystemNode* g_root, const std::optional<std::string>& cli_tlm_json_path)
-    -> std::unique_ptr<FileSystemNode> {
+auto InitScmiTelemetryTargets(const std::optional<std::string>& cli_tlm_json_path) -> std::vector<std::string> {
   auto& tlm_to_tgt = Instances();
+  tlm_to_tgt.clear();
 
   const auto tlm_json_path = ResolveTlmJsonPath(cli_tlm_json_path);
 
@@ -60,6 +60,7 @@ auto InitProtocolTelemetry(FileSystemNode* g_root, const std::optional<std::stri
 
   std::cout << "tlm schema version: " << tlm_json.at("schema_version") << "\n";
 
+  std::vector<std::string> tlm_ids;
   for (const auto& target : tlm_json.at("targets")) {
     const auto&           settings              = target["settings"];
     const auto&           tlm_id                = static_cast<std::string>(target["instance"]);
@@ -92,11 +93,19 @@ auto InitProtocolTelemetry(FileSystemNode* g_root, const std::optional<std::stri
         .data_events               = CreateTelemetryDataEvents(data_events_path, update_intervals),
     });
     tlm_to_tgt.emplace(tlm_id, std::move(tlm));
+    tlm_ids.push_back(tlm_id);
   }
 
-  auto arm_telemetry = FileSystemNode::CreateDirectory("arm_telemetry", g_root, ProtocolType::SCMI_TELEMETRY);
+  return tlm_ids;
+}
 
-  for (const auto& [cur_tlm_id, tlm] : tlm_to_tgt) {
+auto InitProtocolTelemetry(const FileSystemNode* g_root, const std::optional<std::string>& cli_tlm_json_path)
+    -> std::unique_ptr<FileSystemNode> {
+  const auto tlm_ids = InitScmiTelemetryTargets(cli_tlm_json_path);
+
+  auto arm_telemetry = FileSystemNode::CreateDirectory("arm_telemetry", g_root, ProtocolType::SCMI_SYSFS_TELEMETRY);
+
+  for (const auto& cur_tlm_id : tlm_ids) {
     auto tlm_file_node = BuildProtocolTelemetryFileTree(arm_telemetry.get(), cur_tlm_id);
     arm_telemetry->AddChild(std::move(tlm_file_node));
   }
@@ -129,95 +138,97 @@ auto GetInitialIntervalValue(const SCMITelemetryTarget& tlm) -> std::string {
 }
 
 auto BuildTelemetryTopLevelFiles(SCMITelemetryTarget const& tlm, FileSystemNode* telemetry) -> void {
-  telemetry->AddChild(FileSystemNode::CreateFile("all_des_enable",
-                                                 std::to_string(static_cast<int>(tlm.GetAllDesEnableFlag())) + "\n",
-                                                 FileAccess::WRITE_ONLY, telemetry, ProtocolType::SCMI_TELEMETRY));
+  telemetry->AddChild(
+      FileSystemNode::CreateFile("all_des_enable", std::to_string(static_cast<int>(tlm.GetAllDesEnableFlag())) + "\n",
+                                 FileAccess::WRITE_ONLY, telemetry, ProtocolType::SCMI_SYSFS_TELEMETRY));
 
   telemetry->AddChild(FileSystemNode::CreateFile(
       "all_des_tstamp_enable", std::to_string(static_cast<int>(tlm.GetAllDesTstampEnableFlag())) + "\n",
-      FileAccess::WRITE_ONLY, telemetry, ProtocolType::SCMI_TELEMETRY));
+      FileAccess::WRITE_ONLY, telemetry, ProtocolType::SCMI_SYSFS_TELEMETRY));
 
   const auto& active_update_interval = tlm.GetCurrentUpdateInterval();
   auto formatted_interval = std::format("{},{}\n", ToRawString<std::chrono::seconds>(active_update_interval.first),
                                         active_update_interval.second);
   telemetry->AddChild(FileSystemNode::CreateFile("current_update_interval_ms", formatted_interval,
-                                                 FileAccess::READ_WRITE, telemetry, ProtocolType::SCMI_TELEMETRY));
+                                                 FileAccess::READ_WRITE, telemetry,
+                                                 ProtocolType::SCMI_SYSFS_TELEMETRY));
+
+  telemetry->AddChild(FileSystemNode::CreateFile("des_bulk_read", "", FileAccess::READ_ONLY, telemetry,
+                                                 ProtocolType::SCMI_SYSFS_TELEMETRY));
 
   telemetry->AddChild(
-      FileSystemNode::CreateFile("des_bulk_read", "", FileAccess::READ_ONLY, telemetry, ProtocolType::SCMI_TELEMETRY));
-
-  telemetry->AddChild(FileSystemNode::CreateFile("tlm_enable",
-                                                 std::to_string(static_cast<int>(tlm.GetTlmEnableFlag())) + "\n",
-                                                 FileAccess::READ_WRITE, telemetry, ProtocolType::SCMI_TELEMETRY));
+      FileSystemNode::CreateFile("tlm_enable", std::to_string(static_cast<int>(tlm.GetTlmEnableFlag())) + "\n",
+                                 FileAccess::READ_WRITE, telemetry, ProtocolType::SCMI_SYSFS_TELEMETRY));
 
   telemetry->AddChild(FileSystemNode::CreateFile("version", tlm.GetVersion() + "\n", FileAccess::READ_ONLY, telemetry,
-                                                 ProtocolType::SCMI_TELEMETRY));
+                                                 ProtocolType::SCMI_SYSFS_TELEMETRY));
 
   telemetry->AddChild(FileSystemNode::CreateFile("de_implementation_version", tlm.GetDEImplementationVersion() + "\n",
-                                                 FileAccess::READ_ONLY, telemetry, ProtocolType::SCMI_TELEMETRY));
+                                                 FileAccess::READ_ONLY, telemetry, ProtocolType::SCMI_SYSFS_TELEMETRY));
 
   telemetry->AddChild(FileSystemNode::CreateFile("des_single_sample_read", "", FileAccess::READ_ONLY, telemetry,
-                                                 ProtocolType::SCMI_TELEMETRY));
+                                                 ProtocolType::SCMI_SYSFS_TELEMETRY));
 
   std::string initial_value = GetInitialIntervalValue(tlm);
   telemetry->AddChild(FileSystemNode::CreateFile("available_update_intervals_ms", initial_value + "\n",
-                                                 FileAccess::READ_WRITE, telemetry, ProtocolType::SCMI_TELEMETRY));
+                                                 FileAccess::READ_WRITE, telemetry,
+                                                 ProtocolType::SCMI_SYSFS_TELEMETRY));
 
-  telemetry->AddChild(FileSystemNode::CreateFile("intervals_discrete",
-                                                 tlm.GetIntervalsAreDiscreteFlag() ? "1\n" : "0\n",
-                                                 FileAccess::READ_WRITE, telemetry, ProtocolType::SCMI_TELEMETRY));
+  telemetry->AddChild(
+      FileSystemNode::CreateFile("intervals_discrete", tlm.GetIntervalsAreDiscreteFlag() ? "1\n" : "0\n",
+                                 FileAccess::READ_WRITE, telemetry, ProtocolType::SCMI_SYSFS_TELEMETRY));
 };
 
 auto BuildTelemetryDesFiles(SCMITelemetryTarget const& tlm, FileSystemNode* telemetry) -> void {
-  auto des_dir = FileSystemNode::CreateDirectory("des", telemetry, ProtocolType::SCMI_TELEMETRY);
+  auto des_dir = FileSystemNode::CreateDirectory("des", telemetry, ProtocolType::SCMI_SYSFS_TELEMETRY);
   // For each data event, create its event directory and add files.
   for (const auto& data_event : tlm.GetDataEvents()) {
     std::string id_str = std::format("0x{:08X}", data_event->id_);
 
-    auto event_dir = FileSystemNode::CreateDirectory(id_str, des_dir.get(), ProtocolType::SCMI_TELEMETRY);
+    auto event_dir = FileSystemNode::CreateDirectory(id_str, des_dir.get(), ProtocolType::SCMI_SYSFS_TELEMETRY);
 
     event_dir->AddChild(FileSystemNode::CreateFile("enable", data_event->enable_ ? "1\n" : "0\n",
                                                    FileAccess::READ_WRITE, event_dir.get(),
-                                                   ProtocolType::SCMI_TELEMETRY));
+                                                   ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     event_dir->AddChild(FileSystemNode::CreateFile("tstamp_enable", data_event->tstamp_enable_ ? "1\n" : "0\n",
                                                    FileAccess::READ_WRITE, event_dir.get(),
-                                                   ProtocolType::SCMI_TELEMETRY));
+                                                   ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     // TODO(ASTL-116) - Handle all other _astl_value_type_t
     event_dir->AddChild(FileSystemNode::CreateFile(
         "value", std::format("{} {:016x}\n", data_event->GetScaledTimestamp(), data_event->last_value_.ui64),
-        FileAccess::READ_ONLY, event_dir.get(), ProtocolType::SCMI_TELEMETRY));
+        FileAccess::READ_ONLY, event_dir.get(), ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     event_dir->AddChild(
         FileSystemNode::CreateFile("compo_instance_id", std::to_string(data_event->compo_instance_id_) + "\n",
-                                   FileAccess::READ_ONLY, event_dir.get(), ProtocolType::SCMI_TELEMETRY));
+                                   FileAccess::READ_ONLY, event_dir.get(), ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     event_dir->AddChild(FileSystemNode::CreateFile("compo_type", std::to_string(data_event->compo_type_) + "\n",
                                                    FileAccess::READ_ONLY, event_dir.get(),
-                                                   ProtocolType::SCMI_TELEMETRY));
+                                                   ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     event_dir->AddChild(FileSystemNode::CreateFile("instance_id", std::to_string(data_event->instance_id_) + "\n",
                                                    FileAccess::READ_ONLY, event_dir.get(),
-                                                   ProtocolType::SCMI_TELEMETRY));
+                                                   ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     event_dir->AddChild(FileSystemNode::CreateFile("persistent", data_event->persistent_ ? "1\n" : "0\n",
                                                    FileAccess::READ_ONLY, event_dir.get(),
-                                                   ProtocolType::SCMI_TELEMETRY));
+                                                   ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     event_dir->AddChild(FileSystemNode::CreateFile("tstamp_rate", std::to_string(data_event->tstamp_rate_) + "\n",
                                                    FileAccess::READ_ONLY, event_dir.get(),
-                                                   ProtocolType::SCMI_TELEMETRY));
+                                                   ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     event_dir->AddChild(FileSystemNode::CreateFile("type", std::to_string(data_event->type_) + "\n",
                                                    FileAccess::READ_ONLY, event_dir.get(),
-                                                   ProtocolType::SCMI_TELEMETRY));
+                                                   ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     event_dir->AddChild(FileSystemNode::CreateFile("unit", data_event->unit_ + "\n", FileAccess::READ_ONLY,
-                                                   event_dir.get(), ProtocolType::SCMI_TELEMETRY));
+                                                   event_dir.get(), ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     event_dir->AddChild(FileSystemNode::CreateFile("unit_exp", data_event->unit_exp_ + "\n", FileAccess::READ_ONLY,
-                                                   event_dir.get(), ProtocolType::SCMI_TELEMETRY));
+                                                   event_dir.get(), ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     des_dir->AddChild(std::move(event_dir));
   }
@@ -225,45 +236,45 @@ auto BuildTelemetryDesFiles(SCMITelemetryTarget const& tlm, FileSystemNode* tele
 }
 
 auto BuildTelemetryGroupFiles(SCMITelemetryTarget& tlm, FileSystemNode* telemetry) -> void {
-  auto groups_dir = FileSystemNode::CreateDirectory("groups", telemetry, ProtocolType::SCMI_TELEMETRY);
+  auto groups_dir = FileSystemNode::CreateDirectory("groups", telemetry, ProtocolType::SCMI_SYSFS_TELEMETRY);
   for (const auto& [group_id, group] : tlm.GetGroups()) {
     // directory for group n, where "n" is the numeric group ID used
     // as the directory name (e.g., groups/0, groups/1, ...).
     auto group_n_dir =
-        FileSystemNode::CreateDirectory(std::to_string(group_id), groups_dir.get(), ProtocolType::SCMI_TELEMETRY);
+        FileSystemNode::CreateDirectory(std::to_string(group_id), groups_dir.get(), ProtocolType::SCMI_SYSFS_TELEMETRY);
 
     // group specific files
     auto composing_des = FileSystemNode::CreateFile("composing_des", "", FileAccess::READ_ONLY, group_n_dir.get(),
-                                                    ProtocolType::SCMI_TELEMETRY);
+                                                    ProtocolType::SCMI_SYSFS_TELEMETRY);
 
     const auto& active_update_interval = group->intervals_.active_update_interval;
     auto formatted_interval = std::format("{},{}\n", ToRawString<std::chrono::seconds>(active_update_interval.first),
                                           active_update_interval.second);
     group_n_dir->AddChild(FileSystemNode::CreateFile("current_update_interval_ms", formatted_interval,
                                                      FileAccess::READ_WRITE, group_n_dir.get(),
-                                                     ProtocolType::SCMI_TELEMETRY));
+                                                     ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     group_n_dir->AddChild(FileSystemNode::CreateFile("des_bulk_read", "", FileAccess::READ_ONLY, group_n_dir.get(),
-                                                     ProtocolType::SCMI_TELEMETRY));
+                                                     ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     group_n_dir->AddChild(FileSystemNode::CreateFile("des_single_sample_read", "", FileAccess::READ_ONLY,
-                                                     group_n_dir.get(), ProtocolType::SCMI_TELEMETRY));
+                                                     group_n_dir.get(), ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     group_n_dir->AddChild(FileSystemNode::CreateFile("enable", group->enable_ ? "1\n" : "0\n", FileAccess::READ_WRITE,
-                                                     group_n_dir.get(), ProtocolType::SCMI_TELEMETRY));
+                                                     group_n_dir.get(), ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     std::string initial_value = GetInitialIntervalValue(tlm);
     group_n_dir->AddChild(FileSystemNode::CreateFile("available_update_intervals_ms", initial_value + "\n",
                                                      FileAccess::READ_ONLY, group_n_dir.get(),
-                                                     ProtocolType::SCMI_TELEMETRY));
+                                                     ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     group_n_dir->AddChild(FileSystemNode::CreateFile("intervals_discrete", group->intervals_.discrete ? "1\n" : "0\n",
                                                      FileAccess::READ_ONLY, group_n_dir.get(),
-                                                     ProtocolType::SCMI_TELEMETRY));
+                                                     ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     group_n_dir->AddChild(FileSystemNode::CreateFile("tstamp_enable", group->tstamp_enable_ ? "1\n" : "0\n",
                                                      FileAccess::READ_WRITE, group_n_dir.get(),
-                                                     ProtocolType::SCMI_TELEMETRY));
+                                                     ProtocolType::SCMI_SYSFS_TELEMETRY));
 
     // de specific changes
     for (auto event : group->des_) {
@@ -287,7 +298,7 @@ auto BuildProtocolTelemetryFileTree(FileSystemNode* arm_telemetry_root, const st
   auto& tlm = SCMITelemetryTarget::Instance(tlm_id);
 
   // Create tlm-N under arm_telemetry_root.
-  auto telemetry = FileSystemNode::CreateDirectory(tlm_id, arm_telemetry_root, ProtocolType::SCMI_TELEMETRY);
+  auto telemetry = FileSystemNode::CreateDirectory(tlm_id, arm_telemetry_root, ProtocolType::SCMI_SYSFS_TELEMETRY);
 
   BuildTelemetryTopLevelFiles(tlm, telemetry.get());
   BuildTelemetryDesFiles(tlm, telemetry.get());

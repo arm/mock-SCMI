@@ -10,6 +10,8 @@
 #include "common.hpp"
 #include "fsnode.hpp"
 #include "protocol.hpp"
+#include "protocol_scmi_ioctl.hpp"
+#include "scmi_backend_selection.hpp"
 
 namespace mock_scmi {
 
@@ -36,9 +38,14 @@ static void LowLevelInit(void* user_data, struct fuse_conn_info* conn) {
   // Create the absolute root directory.
   fuse_user_data->root = FileSystemNode::CreateDirectory("/");
 
-  InitProtocol(fuse_user_data->root.get(), fuse_user_data->tlm_json_path);
+  if (fuse_user_data->scmi_backend_preference == ScmiBackendPreference::IOCTL) {
+    InitIoctlProtocol(fuse_user_data->root.get(), fuse_user_data->tlm_json_path);
+  } else {
+    InitProtocol(fuse_user_data->root.get(), fuse_user_data->tlm_json_path);
+  }
 
-  std::cout << "Mock filesystem initialized! - " << kStartUnitTest << std::endl;
+  std::cout << "Mock filesystem initialized! backend=" << BackendPreferenceName(fuse_user_data->scmi_backend_preference)
+            << " - " << kStartUnitTest << std::endl;
 }
 
 static void LowLevelDestroy(void* user_data) { (void)user_data; }
@@ -272,46 +279,90 @@ static void LowLevelReadDir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t o
   ReplyBufferLimited(req, buf.data(), buf.size(), off, size);
 }
 
-const struct fuse_lowlevel_ops kFuseLowLevelOps = {
-    .init        = LowLevelInit,
-    .destroy     = LowLevelDestroy,
-    .lookup      = LowLevelLookup,
-    .forget      = NULL,
-    .getattr     = LowLevelGetAttr,
-    .setattr     = NULL,
-    .readlink    = NULL,
-    .mknod       = NULL,
-    .mkdir       = NULL,
-    .unlink      = NULL,
-    .rmdir       = NULL,
-    .symlink     = NULL,
-    .rename      = NULL,
-    .link        = NULL,
-    .open        = LowLevelOpen,
-    .read        = LowLevelRead,
-    .write       = LowLevelWrite,
-    .flush       = NULL,
-    .release     = NULL,
-    .fsync       = NULL,
-    .opendir     = LowLevelOpenDir,
-    .readdir     = LowLevelReadDir,
-    .releasedir  = NULL,
-    .fsyncdir    = NULL,
-    .statfs      = NULL,
-    .setxattr    = NULL,
-    .getxattr    = NULL,
-    .listxattr   = NULL,
-    .removexattr = NULL,
-    .access      = NULL,
-    .create      = NULL,
-    .getlk       = NULL,
-    .setlk       = NULL,
-    .bmap        = NULL,
 #if FUSE_USE_VERSION < 35
-    .ioctl = NULL,  // Different function signature. See fuse_lowlevel.h
+using FuseIoctlCommand = int;
 #else
-    .ioctl = NULL,
+using FuseIoctlCommand = unsigned int;
 #endif
+
+struct LowLevelIoctlRequest {
+  fuse_req_t       request;
+  fuse_ino_t       inode;
+  FuseIoctlCommand command;
+  const void*      input_buffer;
+  size_t           input_buffer_size;
+  size_t           output_buffer_size;
+};
+
+static void HandleLowLevelIoctl(const LowLevelIoctlRequest& request) {
+  std::cout << "ioctl: ino=" << request.inode << ", cmd=" << request.command
+            << ", in_bufsz=" << request.input_buffer_size << ", out_bufsz=" << request.output_buffer_size << std::endl;
+  FuseUserData* fuse_user_data = static_cast<FuseUserData*>(fuse_req_userdata(request.request));
+
+  const FileSystemNode* node = FindNodeByIno(fuse_user_data->root.get(), request.inode);
+  if (!node) {
+    fuse_reply_err(request.request, ENOENT);
+    return;
+  }
+
+  if (node->GetType() == NodeType::DIRECTORY_NODE) {
+    fuse_reply_err(request.request, EISDIR);
+    return;
+  }
+
+  auto reply = HandleProtocolIoctl(node, static_cast<unsigned int>(request.command), request.input_buffer,
+                                   request.input_buffer_size);
+  if (reply.error_code != 0) {
+    fuse_reply_err(request.request, reply.error_code);
+    return;
+  }
+
+  if (reply.output.empty()) {
+    fuse_reply_ioctl(request.request, 0, nullptr, 0);
+    return;
+  }
+
+  fuse_reply_ioctl(request.request, 0, reply.output.data(), std::min(reply.output.size(), request.output_buffer_size));
+}
+
+const struct fuse_lowlevel_ops kFuseLowLevelOps = {
+    .init            = LowLevelInit,
+    .destroy         = LowLevelDestroy,
+    .lookup          = LowLevelLookup,
+    .forget          = NULL,
+    .getattr         = LowLevelGetAttr,
+    .setattr         = NULL,
+    .readlink        = NULL,
+    .mknod           = NULL,
+    .mkdir           = NULL,
+    .unlink          = NULL,
+    .rmdir           = NULL,
+    .symlink         = NULL,
+    .rename          = NULL,
+    .link            = NULL,
+    .open            = LowLevelOpen,
+    .read            = LowLevelRead,
+    .write           = LowLevelWrite,
+    .flush           = NULL,
+    .release         = NULL,
+    .fsync           = NULL,
+    .opendir         = LowLevelOpenDir,
+    .readdir         = LowLevelReadDir,
+    .releasedir      = NULL,
+    .fsyncdir        = NULL,
+    .statfs          = NULL,
+    .setxattr        = NULL,
+    .getxattr        = NULL,
+    .listxattr       = NULL,
+    .removexattr     = NULL,
+    .access          = NULL,
+    .create          = NULL,
+    .getlk           = NULL,
+    .setlk           = NULL,
+    .bmap            = NULL,
+    .ioctl           = [](fuse_req_t req, fuse_ino_t ino, FuseIoctlCommand                      cmd, void* /*arg*/,
+                struct fuse_file_info* /*file_info*/, unsigned /*flags*/, const void* in_buf, size_t in_bufsz,
+                size_t out_bufsz) { HandleLowLevelIoctl({req, ino, cmd, in_buf, in_bufsz, out_bufsz}); },
     .poll            = NULL,
     .write_buf       = NULL,
     .retrieve_reply  = NULL,

@@ -12,6 +12,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "common.hpp"
 #include "fsnode.hpp"
@@ -61,8 +62,16 @@ enum class TelemetryFile {
  * @param tlm_json_path Optional telemetry JSON path from the command line.
  * @return std::unique_ptr<FileSystemNode> Unique pointer to the telemetry directory node.
  */
-std::unique_ptr<FileSystemNode> InitProtocolTelemetry(FileSystemNode*                   g_root,
+std::unique_ptr<FileSystemNode> InitProtocolTelemetry(const FileSystemNode*             g_root,
                                                       const std::optional<std::string>& tlm_json_path);
+
+/**
+ * @brief Initializes telemetry target state without constructing a sysfs tree.
+ *
+ * @param tlm_json_path Optional telemetry JSON path from the command line.
+ * @return Configured telemetry target identifiers in declaration order.
+ */
+auto InitScmiTelemetryTargets(const std::optional<std::string>& tlm_json_path) -> std::vector<std::string>;
 
 /**
  * @brief Writes telemetry data for the specified node.
@@ -111,7 +120,7 @@ struct DataEventConfig {
   bool                                  tstamp_enable{};
   astl_value_t                          last_value{};
   astl_value_type_t                     value_type{ASTL_VALUE_UNKNOWN};
-  std::chrono::system_clock::time_point last_timestamp{};
+  std::chrono::system_clock::time_point last_timestamp;
   uint32_t                              compo_instance_id{};
   uint32_t                              compo_type{};
   uint32_t                              instance_id{};

@@ -5,6 +5,7 @@
 #ifndef INCLUDE_PROTOCOL_HPP
 #define INCLUDE_PROTOCOL_HPP
 
+#include <cstddef>
 #include <optional>
 #include <string>
 
@@ -12,6 +13,8 @@
 #include "fsnode.hpp"
 
 namespace mock_scmi {
+
+struct IoctlReply;
 
 /**
  * @brief Initializes SCMI protocol handlers for the file system.
@@ -24,6 +27,18 @@ namespace mock_scmi {
  * @param config_file_path Optional protocol configuration file path from the command line.
  */
 auto InitProtocol(FileSystemNode* g_root, const std::optional<std::string>& config_file_path) -> void;
+
+/**
+ * @brief Initializes SCMI ioctl protocol handlers for the file system.
+ *
+ * @details Creates a device-like file per configured telemetry target at the
+ * mount root, using the ioctl naming convention (`tlm_0`) rather than the
+ * legacy sysfs directory convention (`tlm-0`).
+ *
+ * @param g_root Pointer to the root file system node.
+ * @param config_file_path Optional protocol configuration file path from the command line.
+ */
+auto InitIoctlProtocol(FileSystemNode* g_root, const std::optional<std::string>& config_file_path) -> void;
 
 /**
  * @brief Dispatches the write operation for a file system node based on its protocol.
@@ -53,6 +68,18 @@ auto HandleProtocolWrite(const FileSystemNode* node, const std::string& value) -
  * @return std::string The data read from the node as a string, or an empty string if the protocol is unsupported.
  */
 auto HandleProtocolRead(const FileSystemNode* node) -> std::string;
+
+/**
+ * @brief Dispatches an ioctl operation for a file system node based on its protocol.
+ *
+ * @param node A pointer to the file system node receiving the ioctl.
+ * @param cmd Encoded ioctl command.
+ * @param in_buf Input buffer provided by FUSE for commands with write direction.
+ * @param in_bufsz Size of in_buf in bytes.
+ * @return IoctlReply containing either errno-compatible error_code or output data.
+ */
+auto HandleProtocolIoctl(const FileSystemNode* node, unsigned int cmd, const void* in_buf, size_t in_bufsz)
+    -> IoctlReply;
 
 }  // namespace mock_scmi
 

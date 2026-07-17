@@ -12,6 +12,7 @@
 #include <string>
 
 #include "fsnode.hpp"
+#include "scmi_backend_selection.hpp"
 
 namespace mock_scmi {
 
@@ -47,6 +48,7 @@ extern const struct fuse_lowlevel_ops kFuseLowLevelOps;
 struct FuseUserData {
   std::unique_ptr<FileSystemNode> root;
   std::optional<std::string>      tlm_json_path;
+  ScmiBackendPreference           scmi_backend_preference{ScmiBackendPreference::AUTO};
 };
 
 }  // namespace mock_scmi

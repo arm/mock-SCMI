@@ -1,0 +1,30 @@
+info version=0x00010000 de_impl=CAFEBABECAFEBABECAFEBABEBEEF0000 num_des=7 num_groups=2 num_intervals=3 num_shmtis=0
+cfg enable=1 t_enable=1 active=1,0
+cfg_after_disable enable=0 t_enable=1
+de_cfg_before id=0x00000000 enable=0 t_enable=1
+de_cfg_after id=0x00000000 enable=1 t_enable=1
+sample_disabled id=0x00000000 tstamp=0 val=0
+cfg_after_enable enable=1 t_enable=1
+de_info id=0x00000000 ts_rate=1 data_sz=8 persistent=1
+de_units watts=4 megahertz=5
+sample id=0x00000000 read=ok
+all_de_cfg_before enable=1 t_enable=1
+all_de_cfg_after enable=0 t_enable=0
+de_cfg_after_all id=0x00000000 enable=0 t_enable=0
+group_info id=0 num_des=3 num_intervals=3
+group_info id=1 num_des=4 num_intervals=3
+missing_de_cfg errno=22
+missing_group_info errno=22
+bad_size_get_de_cfg errno=25
+unsupported_get_intervals errno=25
+unsupported_get_de_list errno=25
+unsupported_get_group_list errno=25
+unsupported_get_group_desc errno=25
+unsupported_single_sample errno=25
+unsupported_bulk_read errno=25
+unsupported_batch_read errno=25
+unsupported_get_shmti_list errno=25
+info_tlm_1 de_impl=CAFEBABECAFEBABECAFEBABEBEEF0001
+de_cfg_tlm_1 id=0x00010000 enable=0 t_enable=1
+./tlm_0
+./tlm_1

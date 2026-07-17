@@ -12,14 +12,16 @@ namespace mock_scmi {
  *
  * @details This enum defines the supported SCMI protocols. Currently, it includes:
  * - @c NONE: No protocol.
- * - @c SCMI_TELEMETRY: The SCMI telemetry protocol.
+ * - @c SCMI_SYSFS_TELEMETRY: The SCMI SYSFS telemetry protocol.
+ * - @c SCMI_IOCTL_TELEMETRY: The SCMI IOCTL telemetry protocol.
  *
  * The enum is designed to be extensible for future protocols, such as additional SCMI drivers
  * for power management, sensor management, etc.
  */
 enum class ProtocolType {
   NONE,
-  SCMI_TELEMETRY,
+  SCMI_SYSFS_TELEMETRY,
+  SCMI_IOCTL_TELEMETRY,
   // Add additional protocols here...
 };
 
