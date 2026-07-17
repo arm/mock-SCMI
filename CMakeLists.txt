@@ -3,48 +3,48 @@
 # SPDX-License-Identifier: Apache-2.0
 
 cmake_minimum_required(VERSION 3.13) # target link directories support
-project(MockSysfs LANGUAGES CXX)
+project(MockScmi LANGUAGES CXX)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FUSE3 REQUIRED fuse3)
 find_package(nlohmann_json CONFIG REQUIRED)
 
-file(GLOB_RECURSE MOCK_SYSFS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+file(GLOB_RECURSE MOCK_SCMI_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
-add_executable(MockSysfs ${MOCK_SYSFS_SOURCES})
+add_executable(MockScmi ${MOCK_SCMI_SOURCES})
 
 include(CTest)
 enable_testing()
 
 add_test(
-  NAME toolsMocksysfsFind
+  NAME toolsMockscmiFind
   COMMAND
-    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockSysfs>
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockScmi>
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/find/expected.txt ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/find/command.sh)
-set_tests_properties(toolsMocksysfsFind PROPERTIES LABELS "integration;mocksysfs" SKIP_RETURN_CODE 77)
+set_tests_properties(toolsMockscmiFind PROPERTIES LABELS "integration;mockscmi" SKIP_RETURN_CODE 77)
 
 add_test(
-  NAME toolsMocksysfsCdPermissions
+  NAME toolsMockscmiCdPermissions
   COMMAND
-    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockSysfs>
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockScmi>
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/cd_permissions/expected.txt
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/cd_permissions/command.sh)
-set_tests_properties(toolsMocksysfsCdPermissions PROPERTIES LABELS "integration;mocksysfs" SKIP_RETURN_CODE 77)
+set_tests_properties(toolsMockscmiCdPermissions PROPERTIES LABELS "integration;mockscmi" SKIP_RETURN_CODE 77)
 
 add_test(
-  NAME toolsMocksysfsAllDesEnableToIndividualEnableConsistency
+  NAME toolsMockscmiAllDesEnableToIndividualEnableConsistency
   COMMAND
-    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockSysfs>
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockScmi>
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/all_des_enable_to_individual_enable_consistency/expected.txt
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/all_des_enable_to_individual_enable_consistency/command.sh)
-set_tests_properties(toolsMocksysfsAllDesEnableToIndividualEnableConsistency PROPERTIES LABELS "integration;mocksysfs"
-                                                                                        SKIP_RETURN_CODE 77)
+set_tests_properties(toolsMockscmiAllDesEnableToIndividualEnableConsistency PROPERTIES LABELS "integration;mockscmi"
+                                                                                       SKIP_RETURN_CODE 77)
 
-target_compile_definitions(MockSysfs PRIVATE FUSE_USE_VERSION=316 # make sure to update scripts/lint.sh if this changes
+target_compile_definitions(MockScmi PRIVATE FUSE_USE_VERSION=316 # make sure to update scripts/lint.sh if this changes
 )
 
-target_include_directories(MockSysfs PRIVATE ${FUSE3_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(MockScmi PRIVATE ${FUSE3_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_directories(MockSysfs PRIVATE ${FUSE3_LIBRARY_DIRS})
+target_link_directories(MockScmi PRIVATE ${FUSE3_LIBRARY_DIRS})
 
-target_link_libraries(MockSysfs PRIVATE ${FUSE3_LIBRARIES} nlohmann_json::nlohmann_json)
+target_link_libraries(MockScmi PRIVATE ${FUSE3_LIBRARIES} nlohmann_json::nlohmann_json)

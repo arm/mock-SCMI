@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include "mock_sysfs.hpp"
+#include "mock_scmi.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -11,7 +11,7 @@
 #include "fsnode.hpp"
 #include "protocol.hpp"
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 constexpr std::string_view kStartUnitTest = "eccf4f7c-d1b1-47f0-9d23-159f6d38b661";
 
@@ -181,43 +181,57 @@ static void LowLevelRead(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
   ReplyBufferLimited(req, node->GetFileContent().c_str(), node->GetFileContent().size(), off, size);
 }
 
-static void LowLevelWrite(fuse_req_t req, fuse_ino_t ino, const char* buf, size_t size, off_t off,
-                          struct fuse_file_info* file_info) {
-  (void)file_info;
-  std::cout << "write: ino=" << ino << ", size=" << size << ", off=" << off << std::endl;
-  FuseUserData* fuse_user_data = static_cast<FuseUserData*>(fuse_req_userdata(req));
+struct LowLevelWriteRequest {
+  fuse_req_t             req;
+  fuse_ino_t             ino;
+  const char*            buffer;
+  size_t                 size;
+  off_t                  offset;
+  struct fuse_file_info* file_info;
+};
 
-  FileSystemNode* node = FindNodeByIno(fuse_user_data->root.get(), ino);
+static void HandleLowLevelWrite(const LowLevelWriteRequest& request) {
+  (void)request.file_info;
+  std::cout << "write: ino=" << request.ino << ", size=" << request.size << ", off=" << request.offset << std::endl;
+  FuseUserData* fuse_user_data = static_cast<FuseUserData*>(fuse_req_userdata(request.req));
+
+  FileSystemNode* node = FindNodeByIno(fuse_user_data->root.get(), request.ino);
 
   if (!node) {
-    fuse_reply_err(req, ENOENT);
+    fuse_reply_err(request.req, ENOENT);
     return;
   }
 
   if (node->GetType() == NodeType::DIRECTORY_NODE) {
-    fuse_reply_err(req, EISDIR);
+    fuse_reply_err(request.req, EISDIR);
     return;
   }
 
-  if (HandleProtocolWrite(node, std::string(buf, size)) != ErrorCode::SUCCESS) {
-    fuse_reply_err(req, EIO);
+  if (HandleProtocolWrite(node, std::string(request.buffer, request.size)) != ErrorCode::SUCCESS) {
+    fuse_reply_err(request.req, EIO);
     return;
   }
 
-  if (off + size > kMaxContentLen - 1) {
-    fuse_reply_err(req, EFBIG);
+  if (request.offset + request.size > kMaxContentLen - 1) {
+    fuse_reply_err(request.req, EFBIG);
     return;
   }
 
   // Resize the content if needed
-  if (off + size > node->GetFileContent().size()) {
-    node->GetFileContent().resize(off + size);
+  if (request.offset + request.size > node->GetFileContent().size()) {
+    node->GetFileContent().resize(request.offset + request.size);
   }
 
-  std::copy(buf, std::next(buf, static_cast<off_t>(size)), node->GetFileContent().begin() + off);
+  std::copy(request.buffer, std::next(request.buffer, static_cast<off_t>(request.size)),
+            node->GetFileContent().begin() + request.offset);
 
-  fuse_reply_write(req, size);
+  fuse_reply_write(request.req, request.size);
 }
+
+static constexpr auto LowLevelWrite = []<typename... Args>(Args... args) {
+  static_assert(sizeof...(Args) == 6);
+  HandleLowLevelWrite(LowLevelWriteRequest{args...});
+};
 
 // cppcheck-suppress constParameterCallback // (file_info is mutated by callback)
 static void LowLevelOpenDir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* file_info) {
@@ -309,4 +323,4 @@ const struct fuse_lowlevel_ops kFuseLowLevelOps = {
     .lseek           = NULL,
 };
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi

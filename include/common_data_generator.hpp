@@ -9,7 +9,7 @@
 #include <random>
 #include <vector>
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 template <typename T>
 concept AllowedUnsignedIntegral =
@@ -221,6 +221,6 @@ extern template class PulseGenerator<int64_t>;
 extern template class PulseGenerator<float>;
 extern template class PulseGenerator<double>;
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi
 
 #endif  // INCLUDE_COMMON_DATA_GENERATOR_HPP_

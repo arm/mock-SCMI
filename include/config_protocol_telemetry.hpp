@@ -19,7 +19,7 @@
 
 using json = nlohmann::json;
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 /**
  * @brief Default driver settings for SCMI Kernel Telemetry userspace API
@@ -29,15 +29,8 @@ namespace mock_sysfs {
 
 class RandomDataEvent : public DataEvent {
  public:
-  RandomDataEvent(data_event_id_t data_event_id, bool enable, bool tstamp_enable, astl_value_t last_value,
-                  astl_value_type_t value_type, std::chrono::system_clock::time_point last_timestamp,
-                  uint32_t compo_instance_id, uint32_t compo_type, uint32_t instance_id, bool persistent,
-                  uint32_t tstamp_rate, uint32_t type, std::string unit, std::string unit_exp, uint64_t rand_min,
-                  uint64_t rand_max, std::optional<group_id_t> group = std::nullopt)
-      : DataEvent(data_event_id, enable, tstamp_enable, last_value, value_type, last_timestamp, compo_instance_id,
-                  compo_type, instance_id, persistent, tstamp_rate, type, std::move(unit), std::move(unit_exp), group),
-        rand_min_(rand_min),
-        rand_max_(rand_max) {}
+  RandomDataEvent(DataEventConfig config, uint64_t rand_min, uint64_t rand_max)
+      : DataEvent(std::move(config)), rand_min_(rand_min), rand_max_(rand_max) {}
 
   astl_value_t Generate() override {
     static std::random_device               rdev;
@@ -57,14 +50,8 @@ class RandomDataEvent : public DataEvent {
 
 class CsvDataEvent : public DataEvent {
  public:
-  CsvDataEvent(data_event_id_t data_event_id, bool enable, bool tstamp_enable, astl_value_t last_value,
-               astl_value_type_t value_type, std::chrono::system_clock::time_point last_timestamp,
-               uint32_t compo_instance_id, uint32_t compo_type, uint32_t instance_id, bool persistent,
-               uint32_t tstamp_rate, uint32_t type, std::string unit, std::string unit_exp, const std::string& csv_path,
-               uint8_t column, std::optional<group_id_t> group = std::nullopt)
-      : DataEvent(data_event_id, enable, tstamp_enable, last_value, value_type, last_timestamp, compo_instance_id,
-                  compo_type, instance_id, persistent, tstamp_rate, type, std::move(unit), std::move(unit_exp), group),
-        csv_gen_(csv_path, column) {}
+  CsvDataEvent(DataEventConfig config, const std::string& csv_path, uint8_t column)
+      : DataEvent(std::move(config)), csv_gen_(csv_path, column) {}
 
   astl_value_t Generate() override {
     auto str = csv_gen_.GenerateCSV();
@@ -113,6 +100,10 @@ inline std::vector<std::unique_ptr<DataEvent>> CreateTelemetryDataEvents(std::st
       group_id = static_cast<group_id_t>(data_event.at("group_id").get<group_id_t>());
     }
 
+    DataEventConfig event_config{
+        data_event_id, enable,     tstamp_enable, last_value, value_type, last_timestamp, compo_instance_id, compo_type,
+        instance_id,   persistent, tstamp_rate,   type,       unit,       unit_exp,       group_id};
+
     const auto& gen     = data_event.at("generator");
     const int   type_id = gen.at("type_id").get<int>();
     const auto& params  = gen.at("params");
@@ -121,9 +112,7 @@ inline std::vector<std::unique_ptr<DataEvent>> CreateTelemetryDataEvents(std::st
       case 1: {  // RandomDataEvent
         const uint64_t rand_min = params.at("min").get<uint64_t>();
         const uint64_t rand_max = params.at("max").get<uint64_t>();
-        events.push_back(std::make_unique<RandomDataEvent>(
-            data_event_id, enable, tstamp_enable, last_value, value_type, last_timestamp, compo_instance_id, compo_type,
-            instance_id, persistent, tstamp_rate, type, unit, unit_exp, rand_min, rand_max, group_id));
+        events.push_back(std::make_unique<RandomDataEvent>(std::move(event_config), rand_min, rand_max));
         break;
       }
       case 2: {  // CsvDataEvent
@@ -132,9 +121,7 @@ inline std::vector<std::unique_ptr<DataEvent>> CreateTelemetryDataEvents(std::st
 
         std::filesystem::path csv_file_path = std::filesystem::path(json_path).parent_path() / file;
 
-        events.push_back(std::make_unique<CsvDataEvent>(
-            data_event_id, enable, tstamp_enable, last_value, value_type, last_timestamp, compo_instance_id, compo_type,
-            instance_id, persistent, tstamp_rate, type, unit, unit_exp, csv_file_path, column, group_id));
+        events.push_back(std::make_unique<CsvDataEvent>(std::move(event_config), csv_file_path, column));
         break;
       }
       default:
@@ -144,6 +131,6 @@ inline std::vector<std::unique_ptr<DataEvent>> CreateTelemetryDataEvents(std::st
   return events;
 }
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi
 
 #endif  // INCLUDE_CONFIG_PROTOCOL_TELEMETRY_HPP

@@ -16,7 +16,7 @@
 #include "common.hpp"
 #include "fsnode.hpp"
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 using update_interval_t = std::pair<std::chrono::seconds, int16_t>;
 
@@ -105,6 +105,24 @@ struct DesGroup {
   UpdateInterval               intervals_{};
 };
 
+struct DataEventConfig {
+  data_event_id_t                       data_event_id{};
+  bool                                  enable{};
+  bool                                  tstamp_enable{};
+  astl_value_t                          last_value{};
+  astl_value_type_t                     value_type{ASTL_VALUE_UNKNOWN};
+  std::chrono::system_clock::time_point last_timestamp{};
+  uint32_t                              compo_instance_id{};
+  uint32_t                              compo_type{};
+  uint32_t                              instance_id{};
+  bool                                  persistent{};
+  uint32_t                              tstamp_rate{};
+  uint32_t                              type{};
+  std::string                           unit;
+  std::string                           unit_exp;
+  std::optional<group_id_t>             group_id;
+};
+
 /**
  * @brief Abstract base class for telemetry data events.
  *
@@ -119,26 +137,22 @@ class DataEvent {
   DataEvent(DataEvent&&)                 = delete;
   DataEvent& operator=(const DataEvent&) = delete;
   DataEvent& operator=(DataEvent&&)      = delete;
-  DataEvent(data_event_id_t data_event_id, bool enable, bool tstamp_enable, _astl_value_t last_value,
-            _astl_value_type_t value_type, std::chrono::system_clock::time_point last_timestamp,
-            uint32_t compo_instance_id, uint32_t compo_type, uint32_t instance_id, bool persistent,
-            uint32_t tstamp_rate, uint32_t type, std::string unit, std::string unit_exp,
-            std::optional<group_id_t> group_id = std::nullopt)
-      : id_(data_event_id),
-        enable_(enable),
-        tstamp_enable_(tstamp_enable),
-        last_value_(last_value),
-        value_type_(value_type),
-        last_timestamp_(last_timestamp),
-        compo_instance_id_(compo_instance_id),
-        compo_type_(compo_type),
-        instance_id_(instance_id),
-        persistent_(persistent),
-        tstamp_rate_(tstamp_rate),
-        type_(type),
-        unit_(std::move(unit)),
-        unit_exp_(std::move(unit_exp)),
-        group_id_(group_id) {}
+  explicit DataEvent(DataEventConfig config)
+      : id_(config.data_event_id),
+        enable_(config.enable),
+        tstamp_enable_(config.tstamp_enable),
+        last_value_(config.last_value),
+        value_type_(config.value_type),
+        last_timestamp_(config.last_timestamp),
+        compo_instance_id_(config.compo_instance_id),
+        compo_type_(config.compo_type),
+        instance_id_(config.instance_id),
+        persistent_(config.persistent),
+        tstamp_rate_(config.tstamp_rate),
+        type_(config.type),
+        unit_(std::move(config.unit)),
+        unit_exp_(std::move(config.unit_exp)),
+        group_id_(config.group_id) {}
   virtual ~DataEvent() = default;
 
   virtual astl_value_t Generate() = 0;
@@ -173,6 +187,16 @@ class DataEvent {
   std::optional<group_id_t> group_id_;
 };
 
+struct SCMITelemetryTargetConfig {
+  bool                                    all_des_enable{};
+  bool                                    all_des_tstamp_enable{};
+  UpdateInterval                          intervals;
+  bool                                    tlm_enable{};
+  std::string                             version;
+  std::string                             de_implementation_version;
+  std::vector<std::unique_ptr<DataEvent>> data_events;
+};
+
 /**
  * @brief Class managing an SCMI target.
  *
@@ -185,9 +209,7 @@ class DataEvent {
 class SCMITelemetryTarget {
  public:
   SCMITelemetryTarget() = default;
-  SCMITelemetryTarget(std::string const& tlm_id, bool all_des_enable, bool all_des_tstamp_enable,
-                      UpdateInterval const& intervals, bool tlm_enable, std::string version,
-                      std::string de_implementation_version, std::vector<std::unique_ptr<DataEvent>> data_events);
+  explicit SCMITelemetryTarget(SCMITelemetryTargetConfig config);
 
   ~SCMITelemetryTarget()                                     = default;
   SCMITelemetryTarget(const SCMITelemetryTarget&)            = delete;
@@ -307,6 +329,6 @@ class SCMITelemetryTarget {
   const std::vector<std::unique_ptr<DataEvent>>             data_events_;
 };
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi
 
 #endif  // INCLUDE_PROTOCOL_TELEMETRY_HPP

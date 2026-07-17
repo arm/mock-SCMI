@@ -11,7 +11,7 @@
 #include "common.hpp"
 #include "fsnode.hpp"
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 /**
  * @brief Initializes SCMI protocol handlers for the file system.
@@ -54,6 +54,6 @@ auto HandleProtocolWrite(const FileSystemNode* node, const std::string& value) -
  */
 auto HandleProtocolRead(const FileSystemNode* node) -> std::string;
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi
 
 #endif  // INCLUDE_PROTOCOL_HPP

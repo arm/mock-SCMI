@@ -7,31 +7,30 @@
 #include <memory>
 #include <unordered_map>
 
-#include "mock_sysfs.hpp"
+#include "mock_scmi.hpp"
 #include "protocol_type.hpp"
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 // Initialize the static inode counter. Root is 1.
 ino_t FileSystemNode::inode_count_ = FUSE_ROOT_ID;
 
 // Private parameterized constructor.
-FileSystemNode::FileSystemNode(const std::string& name, NodeType type, mode_t mode, const FileSystemNode* parent,
-                               ProtocolType protocol, const std::string& file_content)
-    : name_(name),
-      type_(type),
+FileSystemNode::FileSystemNode(Config config)
+    : name_(std::move(config.name)),
+      type_(config.type),
       ino_(inode_count_++),
-      mode_(mode),
-      file_content_(file_content),
-      parent_(parent),
-      protocol_(protocol) {}
+      mode_(config.mode),
+      file_content_(std::move(config.file_content)),
+      parent_(config.parent),
+      protocol_(config.protocol) {}
 
 // Factory method: Create a directory node.
 std::unique_ptr<FileSystemNode> FileSystemNode::CreateDirectory(const std::string&    node_name,
                                                                 const FileSystemNode* parent, ProtocolType protocol) {
   mode_t mode = S_IFDIR | kModeReadExecute;
-  return std::unique_ptr<FileSystemNode>(
-      new FileSystemNode(node_name, NodeType::DIRECTORY_NODE, mode, parent, protocol, ""));
+  return std::unique_ptr<FileSystemNode>(new FileSystemNode(Config{
+      .name = node_name, .type = NodeType::DIRECTORY_NODE, .mode = mode, .parent = parent, .protocol = protocol}));
 }
 
 // Factory method: Create a file node.
@@ -51,8 +50,12 @@ std::unique_ptr<FileSystemNode> FileSystemNode::CreateFile(const std::string& no
       mode = S_IFREG | kModeWriteOnly;
       break;
   }
-  return std::unique_ptr<FileSystemNode>(
-      new FileSystemNode(node_name, NodeType::FILE_NODE, mode, parent, protocol, file_content));
+  return std::unique_ptr<FileSystemNode>(new FileSystemNode(Config{.name         = node_name,
+                                                                   .type         = NodeType::FILE_NODE,
+                                                                   .mode         = mode,
+                                                                   .parent       = parent,
+                                                                   .protocol     = protocol,
+                                                                   .file_content = file_content}));
 }
 
 /*
@@ -91,4 +94,4 @@ FileSystemNode* FindNodeByIno(FileSystemNode* node, ino_t ino) {
   return nullptr;
 }
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi

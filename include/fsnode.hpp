@@ -13,7 +13,7 @@
 
 #include "protocol_type.hpp"
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 class FileSystemNode;
 
@@ -145,6 +145,15 @@ class FileSystemNode {
   FileSystemNode() = delete;
 
  private:
+  struct Config {
+    std::string           name;
+    NodeType              type;
+    mode_t                mode;
+    const FileSystemNode* parent;
+    ProtocolType          protocol;
+    std::string           file_content;
+  };
+
   std::string name_;  // The name of the node
   NodeType    type_;  // File or Directory
   ino_t       ino_;   // Unique index node
@@ -166,19 +175,13 @@ class FileSystemNode {
    * The constructor is private. Instances of FileSystemNode should be created via
    * the CreateDirectory and CreateFile factory methods.
    *
-   * @param name The name of the node.
-   * @param type The type of the node (file or directory).
-   * @param mode The file mode (permissions) for the node.
-   * @param parent Pointer to the parent node.
-   * @param protocol The protocol associated with the node.
-   * @param file_content The initial content for the node; defaults to an empty string.
+   * @param config Node properties collected by the factory methods.
    */
-  FileSystemNode(const std::string& name, NodeType type, mode_t mode, const FileSystemNode* parent,
-                 ProtocolType protocol, const std::string& file_content = "");
+  explicit FileSystemNode(Config config);
 };
 
 FileSystemNode* FindNodeByIno(FileSystemNode* node, ino_t ino);
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi
 
 #endif  // INCLUDE_FSNODE_HPP_

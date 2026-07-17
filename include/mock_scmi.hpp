@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef INCLUDE_MOCK_SYSFS_HPP_
-#define INCLUDE_MOCK_SYSFS_HPP_
+#ifndef INCLUDE_MOCK_SCMI_HPP_
+#define INCLUDE_MOCK_SCMI_HPP_
 
 #include <fuse_lowlevel.h>
 
@@ -13,7 +13,7 @@
 
 #include "fsnode.hpp"
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 constexpr size_t kMaxContentLen = 1024;
 
@@ -49,6 +49,6 @@ struct FuseUserData {
   std::optional<std::string>      tlm_json_path;
 };
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi
 
-#endif  // INCLUDE_MOCK_SYSFS_HPP_
+#endif  // INCLUDE_MOCK_SCMI_HPP_

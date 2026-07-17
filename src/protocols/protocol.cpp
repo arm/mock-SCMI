@@ -10,7 +10,7 @@
 #include "fsnode.hpp"
 #include "protocol_telemetry.hpp"  // Contains InitProtocolTelemetry() and HandleProtocolTelemetry()
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 auto InitProtocol(FileSystemNode* g_root, const std::optional<std::string>& config_file_path) -> void {
   // Initialize additional protocols here
@@ -48,4 +48,4 @@ auto HandleProtocolRead(const FileSystemNode* node) -> std::string {
   }
 }
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi

@@ -5,7 +5,7 @@
 #ifndef INCLUDE_PROTOCOL_TYPE_HPP
 #define INCLUDE_PROTOCOL_TYPE_HPP
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 /**
  * @brief Specifies the SCMI protocol type associated with a file system node.
@@ -23,6 +23,6 @@ enum class ProtocolType {
   // Add additional protocols here...
 };
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi
 
 #endif  // INCLUDE_PROTOCOL_TYPE_HPP

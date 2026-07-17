@@ -9,7 +9,7 @@
 #include <random>
 #include <sstream>
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 static const auto kProgramStart = std::chrono::steady_clock::now();
 
@@ -162,4 +162,4 @@ template class PulseGenerator<int64_t>;
 template class PulseGenerator<float>;
 template class PulseGenerator<double>;
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi

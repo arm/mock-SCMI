@@ -5,33 +5,33 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # This script is a wrapper for Sysfs unit tests
-# It launches a MockSysfs executable at a unique mount point
+# It launches a MockScmi executable at a unique mount point
 # then runs whatever command is passed as an argument
 
 set -eu -o pipefail
 
-# --- Configure env for MockSysfs JSON path ---
+# --- Configure env for MockScmi JSON path ---
 
 set -x
-# Script path: astl/tools/mock_sysfs/unit_tests/unit_test_fixture.sh
+# Script path: astl/tools/mock_scmi/unit_tests/unit_test_fixture.sh
 # Repo root is three directories up from here.
 MSYS_UNIT_TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ASTL_ROOT="$(realpath "${MSYS_UNIT_TEST_DIR}/../../..")"
-DEFAULT_TLM_JSON="${ASTL_ROOT}/tools/mock_sysfs/config/tlm.json"
-: "${ASTL_MOCKSYSFS_TLM_JSON_PATH:=${DEFAULT_TLM_JSON}}"
-export ASTL_MOCKSYSFS_TLM_JSON_PATH
-if [[ ! -f ${ASTL_MOCKSYSFS_TLM_JSON_PATH} ]]; then
-	echo "❌ ASTL_MOCKSYSFS_TLM_JSON_PATH not found: ${ASTL_MOCKSYSFS_TLM_JSON_PATH}" >&2
+DEFAULT_TLM_JSON="${ASTL_ROOT}/tools/mock_scmi/config/tlm.json"
+: "${ASTL_MOCKSCMI_TLM_JSON_PATH:=${DEFAULT_TLM_JSON}}"
+export ASTL_MOCKSCMI_TLM_JSON_PATH
+if [[ ! -f ${ASTL_MOCKSCMI_TLM_JSON_PATH} ]]; then
+	echo "❌ ASTL_MOCKSCMI_TLM_JSON_PATH not found: ${ASTL_MOCKSCMI_TLM_JSON_PATH}" >&2
 	exit 1
 fi
-echo "✅ ASTL_MOCKSYSFS_TLM_JSON_PATH = ${ASTL_MOCKSYSFS_TLM_JSON_PATH}"
+echo "✅ ASTL_MOCKSCMI_TLM_JSON_PATH = ${ASTL_MOCKSCMI_TLM_JSON_PATH}"
 
 TIMEOUT=30 # Maximum seconds to wait for guid
 PATTERN_READY="eccf4f7c-d1b1-47f0-9d23-159f6d38b661"
 SKIP_CODE=77
 
 if [[ ! -e /dev/fuse || ! -r /dev/fuse || ! -w /dev/fuse ]]; then
-	echo "⚠️  Skipping MockSysfs test: /dev/fuse is unavailable or lacks rw permissions"
+	echo "⚠️  Skipping MockScmi test: /dev/fuse is unavailable or lacks rw permissions"
 	exit "${SKIP_CODE}"
 fi
 
@@ -47,7 +47,7 @@ EXPECTED_OUTPUT=$(realpath "$1")
 shift
 
 if [ -f "${SYSFS_EXECUTABLE}" ]; then
-	echo "✅ Found MockSysfs binary at: ${SYSFS_EXECUTABLE}"
+	echo "✅ Found MockScmi binary at: ${SYSFS_EXECUTABLE}"
 else
 	echo "❌ Error!  Sysfs binary not found at: ${SYSFS_EXECUTABLE}" >/dev/stderr
 	echo "Note: Did you forget to build it with CMake?" >/dev/stderr
@@ -62,7 +62,7 @@ else
 	exit 1
 fi
 
-SYSFS_LOG="${TMP_DIR}/sysfs_log.txt" # Combined stdout and stderr from MockSysfs process (and Valgrind)
+SYSFS_LOG="${TMP_DIR}/sysfs_log.txt" # Combined stdout and stderr from MockScmi process (and Valgrind)
 VALGRIND_LOG="${TMP_DIR}/valgrind_log.txt"
 MOUNT_POINT="${TMP_DIR}/mount" # Directory where sysfs will be mounted
 ACTUAL_OUTPUT="${TMP_DIR}/actual.txt"
@@ -86,29 +86,29 @@ DEBUGINFOD_URLS='' valgrind --log-file="${VALGRIND_LOG}" --leak-check=full --sho
 SYSFS_PROCESS="$!"
 
 if ps -p ${SYSFS_PROCESS} >/dev/null; then
-	echo "✅ MockSysfs process launched with PID = ${SYSFS_PROCESS} and log ${SYSFS_LOG}"
+	echo "✅ MockScmi process launched with PID = ${SYSFS_PROCESS} and log ${SYSFS_LOG}"
 else
-	echo "❌ Error!  Failed to launch MockSysfs process" >/dev/stderr
+	echo "❌ Error!  Failed to launch MockScmi process" >/dev/stderr
 	exit 1
 fi
 
-if ! wait_for "${SYSFS_LOG}" "MockSysfs startup" "${PATTERN_READY}"; then
+if ! wait_for "${SYSFS_LOG}" "MockScmi startup" "${PATTERN_READY}"; then
 	# In constrained environments, FUSE is present but cannot be used.
 	# Treat this as a skipped test instead of a hard failure.
 	if grep -qF "failed to open /dev/fuse: Permission denied" "${SYSFS_LOG}"; then
-		echo "⚠️  Skipping MockSysfs test: /dev/fuse permission denied in this environment"
+		echo "⚠️  Skipping MockScmi test: /dev/fuse permission denied in this environment"
 		exit "${SKIP_CODE}"
 	fi
-	echo "❌ Error!  MockSysfs startup pattern was not detected. See log: ${SYSFS_LOG}" >/dev/stderr
+	echo "❌ Error!  MockScmi startup pattern was not detected. See log: ${SYSFS_LOG}" >/dev/stderr
 	exit 1
 fi
 
 if ! ps -p ${SYSFS_PROCESS} >/dev/null; then
 	if grep -qF "failed to open /dev/fuse: Permission denied" "${SYSFS_LOG}"; then
-		echo "⚠️  Skipping MockSysfs test: process exited after startup due /dev/fuse permission denial"
+		echo "⚠️  Skipping MockScmi test: process exited after startup due /dev/fuse permission denial"
 		exit "${SKIP_CODE}"
 	fi
-	echo "❌ Error!  MockSysfs process exited unexpectedly after startup. See log: ${SYSFS_LOG}" >/dev/stderr
+	echo "❌ Error!  MockScmi process exited unexpectedly after startup. See log: ${SYSFS_LOG}" >/dev/stderr
 	exit 1
 fi
 
@@ -127,7 +127,7 @@ if kill -SIGTERM ${SYSFS_PROCESS}; then
 	echo "✅ Sent SIGTERM sysfs process to gracefully kill it"
 else
 	if grep -qF "failed to open /dev/fuse: Permission denied" "${SYSFS_LOG}"; then
-		echo "⚠️  Skipping MockSysfs test: process could not be terminated because /dev/fuse is denied"
+		echo "⚠️  Skipping MockScmi test: process could not be terminated because /dev/fuse is denied"
 		exit "${SKIP_CODE}"
 	fi
 	echo "❌ Error!  Failed to send kill signal to sysfs process with PID: ${SYSFS_PROCESS}" >/dev/stderr
@@ -136,7 +136,7 @@ fi
 
 echo '...End of test output'
 
-# We need an "&& true" guard because wait will pass through the exit code from MockSysfs
+# We need an "&& true" guard because wait will pass through the exit code from MockScmi
 # which will be 143 when the process ends with SIGTERM, even if there's no other error
 wait "${SYSFS_PROCESS}" && true
 

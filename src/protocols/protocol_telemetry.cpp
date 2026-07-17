@@ -20,27 +20,13 @@
 #include "common.hpp"
 #include "config_protocol_telemetry.hpp"
 #include "fsnode.hpp"
+#include "protocol_telemetry_internal.hpp"
 #include "protocol_type.hpp"
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 std::unique_ptr<FileSystemNode> BuildProtocolTelemetryFileTree(FileSystemNode*    arm_telemetry_root,
                                                                std::string const& tlm_id);
-
-template <typename ToDuration = std::chrono::milliseconds, typename Rep, typename Period>
-inline uint64_t ToRaw(const std::chrono::duration<Rep, Period>& duration) {
-  return std::chrono::duration_cast<ToDuration>(duration).count();
-}
-
-template <typename ToDuration = std::chrono::milliseconds, typename Clock, typename Duration>
-inline uint64_t ToRaw(const std::chrono::time_point<Clock, Duration>& timepoint) {
-  return std::chrono::duration_cast<ToDuration>(timepoint.time_since_epoch()).count();
-}
-
-template <typename ToDuration = std::chrono::milliseconds, typename T>
-inline std::string ToRawString(const T& value) {
-  return std::to_string(ToRaw<ToDuration>(value));
-}
 
 static std::unordered_map<std::string, std::unique_ptr<SCMITelemetryTarget>>& Instances() {
   static std::unordered_map<std::string, std::unique_ptr<SCMITelemetryTarget>> tlm_to_target;
@@ -52,38 +38,12 @@ static auto ResolveTlmJsonPath(const std::optional<std::string>& cli_tlm_json_pa
     return *cli_tlm_json_path;
   }
 
-  const char* env = std::getenv("ASTL_MOCKSYSFS_TLM_JSON_PATH");
+  const char* env = std::getenv("ASTL_MOCKSCMI_TLM_JSON_PATH");
   if (env == nullptr) {
-    throw std::runtime_error("ASTL_MOCKSYSFS_TLM_JSON_PATH environment variable is not set.");
+    throw std::runtime_error("ASTL_MOCKSCMI_TLM_JSON_PATH environment variable is not set.");
   }
 
   return env;
-}
-
-inline auto UpdateEventByInterval(DataEvent* event, std::chrono::system_clock::time_point now,
-                                  std::chrono::milliseconds interval) -> void {
-  auto elapsed = now - event->last_timestamp_;
-  if (elapsed < interval) {
-    return;
-  }
-
-  auto ticks = ToRaw(elapsed) / ToRaw(interval);
-
-  for (uint64_t i = 0; i < ticks; ++i) {
-    event->last_value_ = event->Generate();
-  }
-}
-
-template <class Selector>
-update_interval_t GetInterval(const std::vector<update_interval_t>& intervals, Selector selector) {
-  auto comp = [](const auto& a, const auto& b) {  // NOLINT (readability-identifier-length)
-    long double aval =
-        ToRaw<std::chrono::seconds>(a.first) * std::pow(10.0L, a.second);  // NOLINT (readability-magic-numbers)
-    long double bval =
-        ToRaw<std::chrono::seconds>(b.first) * std::pow(10.0L, b.second);  // NOLINT (readability-magic-numbers)
-    return aval < bval;
-  };
-  return *selector(intervals, comp);
 }
 
 auto InitProtocolTelemetry(FileSystemNode* g_root, const std::optional<std::string>& cli_tlm_json_path)
@@ -122,9 +82,15 @@ auto InitProtocolTelemetry(FileSystemNode* g_root, const std::optional<std::stri
     auto exp  = settings["active_update_interval"].at(1).get<int16_t>();
     update_intervals.active_update_interval = std::make_pair(secs, exp);
 
-    auto tlm = std::make_unique<SCMITelemetryTarget>(tlm_id, all_des_enable, all_des_tstamp_enable, update_intervals,
-                                                     tlm_enable, telemetry_version, de_version,
-                                                     CreateTelemetryDataEvents(data_events_path, update_intervals));
+    auto tlm = std::make_unique<SCMITelemetryTarget>(SCMITelemetryTargetConfig{
+        .all_des_enable            = all_des_enable,
+        .all_des_tstamp_enable     = all_des_tstamp_enable,
+        .intervals                 = update_intervals,
+        .tlm_enable                = tlm_enable,
+        .version                   = telemetry_version,
+        .de_implementation_version = de_version,
+        .data_events               = CreateTelemetryDataEvents(data_events_path, update_intervals),
+    });
     tlm_to_tgt.emplace(tlm_id, std::move(tlm));
   }
 
@@ -363,17 +329,14 @@ auto GetTelemetryFile(const std::string& name) -> TelemetryFile {
   return TelemetryFile::UNKNOWN;
 }
 
-SCMITelemetryTarget::SCMITelemetryTarget(std::string const& tlm_id, bool all_des_enable, bool all_des_tstamp_enable,
-                                         UpdateInterval const& intervals, bool tlm_enable, std::string version,
-                                         std::string                             de_implementation_version,
-                                         std::vector<std::unique_ptr<DataEvent>> data_events)
-    : all_des_enable_(all_des_enable),
-      all_des_tstamp_enable_(all_des_tstamp_enable),
-      intervals_(std::move(intervals)),
-      tlm_enable_(tlm_enable),
-      version_(std::move(version)),
-      de_implementation_version_(std::move(de_implementation_version)),
-      data_events_(std::move(data_events)) {
+SCMITelemetryTarget::SCMITelemetryTarget(SCMITelemetryTargetConfig config)
+    : all_des_enable_(config.all_des_enable),
+      all_des_tstamp_enable_(config.all_des_tstamp_enable),
+      intervals_(std::move(config.intervals)),
+      tlm_enable_(config.tlm_enable),
+      version_(std::move(config.version)),
+      de_implementation_version_(std::move(config.de_implementation_version)),
+      data_events_(std::move(config.data_events)) {
   for (const auto& event : data_events_) {
     if (!event->group_id_.has_value()) {
       continue;
@@ -403,354 +366,12 @@ auto SCMITelemetryTarget::GetDataEventById(data_event_id_t identifier) -> DataEv
   return (it != data_events_.end()) ? it->get() : nullptr;
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto HandleProtocolTelemetryWrite(const FileSystemNode* node, const std::string& value) -> ErrorCode {
-  // find tlm_id by traversing up file tree until we find a parent named "arm_telemetry"
-  const FileSystemNode* tlm_id = node;
-  while (tlm_id->GetParent() && tlm_id->GetParent()->GetName() != "arm_telemetry") {
-    tlm_id = tlm_id->GetParent();
-  }
-
-  auto&         tlm       = SCMITelemetryTarget::Instance(tlm_id->GetName());
-  std::string   file_name = node->GetName();
-  TelemetryFile file_type = GetTelemetryFile(file_name);
-
-  const FileSystemNode*     parent       = node->GetParent();
-  const FileSystemNode*     grand_parent = parent ? parent->GetParent() : nullptr;
-  bool                      is_group     = ((grand_parent != nullptr) && grand_parent->GetName() == "groups");
-  std::optional<group_id_t> group_id;
-
-  if (is_group) {
-    group_id = static_cast<group_id_t>(std::stoul(parent->GetName()));
-  }
-
-  switch (file_type) {
-    case TelemetryFile::ALL_DES_ENABLE:
-      if (is_group) {
-        const auto& group = tlm.GetGroups().at(group_id.value());
-        for (const auto& event : tlm.GetDataEvents()) {
-          if (event->group_id_.value() == group_id.value()) {
-            event->enable_ = (std::atoi(value.c_str()) != 0);
-          }
-        }
-        return ErrorCode::SUCCESS;
-      }
-
-      tlm.SetAllDesEnableFlag(std::atoi(value.c_str()) == 1);
-      std::cout << "Set all_des_enable to " << (std::atoi(value.c_str()) == 1 ? "2" : "0") << '\n';
-
-      for (const auto& event : tlm.GetDataEvents()) {
-        event->enable_ = (std::atoi(value.c_str()) != 0);
-      }
-
-      return ErrorCode::SUCCESS;
-
-    case TelemetryFile::ALL_DES_TSTAMP_ENABLE:
-      tlm.SetAllDesTstampEnableFlag(std::atoi(value.c_str()) == 1);
-      std::cout << "Set all_des_tstamp_enable to " << (std::atoi(value.c_str()) == 1 ? "1" : "0") << '\n';
-
-      for (const auto& event : tlm.GetDataEvents()) {
-        event->tstamp_enable_ = (std::atoi(value.c_str()) != 0);
-      }
-
-      return ErrorCode::SUCCESS;
-
-    case TelemetryFile::CURRENT_UPDATE_INTERVAL_MS: {
-      int     sec = 0;
-      int16_t exp = 0;
-
-      std::stringstream string_parser(value);
-      if (!(string_parser >> sec >> exp)) {
-        std::cerr << "Unsupported update interval: " << value << '\n';
-        return ErrorCode::UNSUPPORTED_PROTOCOL;
-      }
-
-      const update_interval_t target_interval{std::chrono::seconds{sec}, exp};
-
-      if (is_group) {
-        const auto& group               = tlm.GetGroups().at(group_id.value());
-        const auto& available_intervals = group->intervals_.update_intervals;
-
-        if (group->intervals_.discrete && std::find(available_intervals.begin(), available_intervals.end(),
-                                                    target_interval) == available_intervals.end()) {
-          std::cerr << "Unsupported update interval: " << sec << "," << exp << '\n';
-          return ErrorCode::UNSUPPORTED_PROTOCOL;
-        }
-
-        // TODO(danngu01): implement check for if not discrete intervals that it is within range and step size
-        group->intervals_.active_update_interval = target_interval;
-        std::cout << "Set group current_update_interval_ms to " << sec << "," << exp << "\n";
-        return ErrorCode::SUCCESS;
-      }
-
-      const auto& available_intervals = tlm.GetAvailableUpdateIntervals();
-      if (tlm.GetIntervalsAreDiscreteFlag() && std::find(available_intervals.begin(), available_intervals.end(),
-                                                         target_interval) == available_intervals.end()) {
-        std::cerr << "Unsupported update interval: " << sec << "," << exp << '\n';
-        return ErrorCode::UNSUPPORTED_PROTOCOL;
-      }
-
-      tlm.SetCurrentUpdateInterval(target_interval);
-      std::cout << "Set current_update_interval_ms to " << sec << "," << exp << "\n";
-      return ErrorCode::SUCCESS;
-    }
-
-    case TelemetryFile::TLM_ENABLE:
-      tlm.SetTlmEnableFlag(std::atoi(value.c_str()) == 1);
-      std::cout << "Set tlm_enable to " << (std::atoi(value.c_str()) == 1 ? "1" : "0") << '\n';
-      return ErrorCode::SUCCESS;
-
-    // DE Handler
-    case TelemetryFile::ENABLE: {
-      if (is_group) {
-        for (const auto& event : tlm.GetDataEvents()) {
-          if (event->group_id_.value() == group_id.value()) {
-            event->enable_ = (std::atoi(value.c_str()) != 0);
-          }
-        }
-      } else {
-        if (!parent) {
-          std::cerr << "Can't enable node with no parent node\n";
-          return ErrorCode::MOUNTPOINT_MISSING;
-        }
-        data_event_id_t data_event_id = static_cast<data_event_id_t>(std::stoul(parent->GetName(), nullptr, kHexRadix));
-        if (auto* event = tlm.GetDataEventById(data_event_id)) {
-          event->enable_ = (std::atoi(value.c_str()) != 0);
-        }
-      }
-
-      return ErrorCode::SUCCESS;
-    }
-
-    case TelemetryFile::TSTAMP_ENABLE: {
-      if (is_group) {
-        for (const auto& event : tlm.GetDataEvents()) {
-          if (event->group_id_.value() == group_id.value()) {
-            event->tstamp_enable_ = (std::atoi(value.c_str()) != 0);
-          }
-        }
-      } else {
-        data_event_id_t data_event_id =
-            static_cast<data_event_id_t>(std::stoul(node->GetParent()->GetName(), nullptr, kHexRadix));
-        std::cout << "id is: " << data_event_id << "\n";
-        DataEvent* data_event = tlm.GetDataEventById(data_event_id);
-
-        data_event->tstamp_enable_ = (std::atoi(value.c_str()) != 0);
-      }
-
-      return ErrorCode::SUCCESS;
-    }
-
-    default:
-      std::cout << "Unknown telemetry file: " << file_name << '\n';
-      return ErrorCode::UNSUPPORTED_PROTOCOL;
-  }
+  return detail::HandleTelemetryWrite(node, value);
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 auto HandleProtocolTelemetryRead(const FileSystemNode* node) -> std::string {
-  const FileSystemNode* tlm_id = node;
-  while (tlm_id->GetParent() && tlm_id->GetParent()->GetName() != "arm_telemetry") {
-    tlm_id = tlm_id->GetParent();
-  }
-
-  auto&         tlm       = SCMITelemetryTarget::Instance(tlm_id->GetName());
-  std::string   file_name = node->GetName();
-  TelemetryFile file_type = GetTelemetryFile(file_name);
-
-  const FileSystemNode*     parent       = node->GetParent();
-  const FileSystemNode*     grand_parent = parent ? parent->GetParent() : nullptr;
-  bool                      is_group     = ((grand_parent != nullptr) && grand_parent->GetName() == "groups");
-  std::optional<group_id_t> group_id;
-
-  if (is_group) {
-    group_id = static_cast<group_id_t>(std::stoul(parent->GetName()));
-  }
-
-  switch (file_type) {
-      // case TelemetryFile::ALL_DES_ENABLE:
-      //   return tlm.GetAllDesEnable() ? "1" : "0";
-
-      // case TelemetryFile::ALL_DES_TSTAMP_ENABLE:
-      //   return tlm.GetAllDesTstampEnable() ? "1" : "0";
-
-    case TelemetryFile::CURRENT_UPDATE_INTERVAL_MS:
-      if (is_group) {
-        const auto& group = tlm.GetGroups().at(group_id.value());
-        return std::format("{},{}\n", ToRawString<std::chrono::seconds>(group->intervals_.active_update_interval.first),
-                           group->intervals_.active_update_interval.second);
-      }
-      return std::format("{},{}\n", ToRawString<std::chrono::seconds>(tlm.GetCurrentUpdateInterval().first),
-                         tlm.GetCurrentUpdateInterval().second);
-
-    case TelemetryFile::DES_BULK_READ: {
-      const auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
-
-      const auto [base, exp] = is_group ? tlm.GetGroups().at(group_id.value())->intervals_.active_update_interval
-                                        : tlm.GetCurrentUpdateInterval();
-
-      const auto seconds_val =
-          ToRaw<std::chrono::seconds>(base) * std::pow(10.0, exp);  // NOLINT (cppcoreguidelines-narrowing-conversions)
-
-      const auto interval_ms =
-          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration<double>(seconds_val));
-
-      std::string result;
-      for (auto& event : tlm.GetDataEvents()) {  // NOLINT (readability-identifier-length)
-        if (!event || !event->enable_ || !tlm.GetTlmEnableFlag()) {
-          continue;
-        }
-
-        if (is_group && (event->group_id_.value() != group_id.value())) {
-          continue;
-        }
-
-        UpdateEventByInterval(event.get(), now_ms, interval_ms);
-
-        // Append latest timestamp if enabled, else 0
-        result += event->tstamp_enable_ ? std::to_string(event->GetScaledTimestamp()) + ": " : "0: ";
-        result += std::format("0x{:04x} ", static_cast<unsigned int>(event->id_));
-
-        // TODO(ASTL-116) - Handle all other _astl_value_type_t
-        result += std::format("{:016x} \n", event->last_value_.ui64);
-      }
-
-      return result;
-    }
-
-    case TelemetryFile::INTERVALS_DISCRETE: {
-      if (is_group) {
-        const auto& group     = tlm.GetGroups().at(group_id.value());
-        const auto& intervals = group->intervals_.update_intervals;
-
-        if (intervals.empty()) {
-          return "";
-        }
-
-        const auto& min_interval = GetInterval(intervals, std::ranges::min_element);
-        const auto& max_interval = GetInterval(intervals, std::ranges::max_element);
-        const auto& step         = group->intervals_.step_size;
-
-        return std::format("{},{} {},{} {},{}\n", ToRawString<std::chrono::seconds>(min_interval.first),
-                           min_interval.second, ToRawString<std::chrono::seconds>(max_interval.first),
-                           max_interval.second, ToRawString<std::chrono::seconds>(step.first), step.second);
-      }
-
-      if (tlm.GetIntervalsAreDiscreteFlag()) {
-        return "0\n";
-      }
-
-      const auto& intervals    = tlm.GetAvailableUpdateIntervals();
-      const auto& min_interval = GetInterval(intervals, std::ranges::min_element);
-      const auto& max_interval = GetInterval(intervals, std::ranges::max_element);
-      const auto& step         = tlm.GetStepSize();
-
-      return std::format("{},{} {},{} {},{}\n", ToRawString<std::chrono::seconds>(min_interval.first),
-                         min_interval.second, ToRawString<std::chrono::seconds>(max_interval.first),
-                         max_interval.second, ToRawString<std::chrono::seconds>(step.first), step.second);
-    }
-
-    case TelemetryFile::TLM_ENABLE:
-      return tlm.GetTlmEnableFlag() ? "1\n" : "0\n";
-
-    // DE Handler
-    case TelemetryFile::ENABLE: {
-      if (is_group) {
-        const auto& groups = tlm.GetGroups().at(group_id.value());
-        return groups->enable_ ? "1\n" : "0\n";
-      }
-      if (!parent) {
-        return "";
-      }
-      data_event_id_t data_event_id = static_cast<data_event_id_t>(std::stoul(parent->GetName(), nullptr, kHexRadix));
-      if (auto* event = tlm.GetDataEventById(data_event_id)) {
-        return event->enable_ ? "1\n" : "0\n";
-      }
-
-      return "";
-    }
-
-    case TelemetryFile::TSTAMP_ENABLE: {
-      if (is_group) {
-        const auto& groups = tlm.GetGroups().at(group_id.value());
-        return groups->tstamp_enable_ ? "1\n" : "0\n";
-      }
-
-      data_event_id_t data_event_id =
-          static_cast<data_event_id_t>(std::stoul(node->GetParent()->GetName(), nullptr, kHexRadix));
-      DataEvent* data_event = tlm.GetDataEventById(data_event_id);
-
-      return std::to_string(static_cast<int>(data_event->tstamp_enable_)) + "\n";
-    }
-
-    case TelemetryFile::TSTAMP_RATE: {
-      data_event_id_t data_event_id =
-          static_cast<data_event_id_t>(std::stoul(node->GetParent()->GetName(), nullptr, kHexRadix));
-      DataEvent* data_event = tlm.GetDataEventById(data_event_id);
-      return std::to_string(data_event->tstamp_rate_) + "\n";
-    }
-
-    case TelemetryFile::VALUE: {
-      // Retrieve DE id from the parent's name (hexadecimal conversion)
-      data_event_id_t data_event_id =
-          static_cast<data_event_id_t>(std::stoul(node->GetParent()->GetName(), nullptr, kHexRadix));
-      DataEvent* data_event = tlm.GetDataEventById(data_event_id);
-
-      // If the event is not enabled, report as "0\n".
-      if (!data_event->enable_ || !tlm.GetTlmEnableFlag()) {
-        return "0\n";
-      }
-
-      const auto now = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
-
-      // Convert update interval from (seconds, exponent) to milliseconds
-      const auto [base, exp] = tlm.GetCurrentUpdateInterval();
-      const auto seconds_val =
-          ToRaw<std::chrono::seconds>(base) * std::pow(10.0, exp);  // NOLINT (cppcoreguidelines-narrowing-conversions)
-
-      const auto interval_ms =
-          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration<double>(seconds_val));
-
-      UpdateEventByInterval(data_event, now, interval_ms);
-
-      // TODO(ASTL-116) - Handle all other _astl_value_type_t
-      if (data_event->tstamp_enable_) {
-        return std::format("{} {:016x}\n", data_event->GetScaledTimestamp(), data_event->last_value_.ui64);
-      }
-      return std::format("0 {:016x}\n", data_event->last_value_.ui64);
-    }
-
-    case TelemetryFile::DES_SINGLE_SAMPLE_READ: {
-      auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
-
-      std::string result;
-
-      for (auto& event : tlm.GetDataEvents()) {  // NOLINT (readability-identifier-length)
-        if (!event || !event->enable_ || !tlm.GetTlmEnableFlag()) {
-          continue;
-        }
-
-        if (is_group && (event->group_id_.value() != group_id.value())) {
-          continue;
-        }
-
-        event->last_value_ = event->Generate();
-
-        // Append latest timestamp if enabled, else 0
-        result += event->tstamp_enable_ ? std::to_string(event->GetScaledTimestamp()) + ": " : "0: ";
-        result += std::format("0x{:04x} ", static_cast<unsigned int>(event->id_));
-
-        // TODO(ASTL-116) - Handle all other _astl_value_type_t
-        result += std::format("{:016x} \n", event->last_value_.ui64);
-      }
-
-      return result;
-    }
-
-    default:
-      std::cout << "Unknown telemetry file: " << file_name << '\n';
-      return "";
-  }
+  return detail::HandleTelemetryRead(node);
 }
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi

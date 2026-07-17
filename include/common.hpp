@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <string>
 
-namespace mock_sysfs {
+namespace mock_scmi {
 
 enum class ErrorCode {
   SUCCESS                 = 0,
@@ -56,33 +56,28 @@ typedef union _astl_value_t {
 } astl_value_t;
 
 inline astl_value_type_t ToValueType(const std::string& str) {
+  astl_value_type_t value_type = ASTL_VALUE_UNKNOWN;
   if (str == "UINT8") {
-    return ASTL_VALUE_UINT8;
+    value_type = ASTL_VALUE_UINT8;
+  } else if (str == "UINT16") {
+    value_type = ASTL_VALUE_UINT16;
+  } else if (str == "UINT32") {
+    value_type = ASTL_VALUE_UINT32;
+  } else if (str == "UINT64") {
+    value_type = ASTL_VALUE_UINT64;
+  } else if (str == "FLOAT32") {
+    value_type = ASTL_VALUE_FLOAT32;
+  } else if (str == "FLOAT64") {
+    value_type = ASTL_VALUE_FLOAT64;
+  } else if (str == "BOOL8") {
+    value_type = ASTL_VALUE_BOOL8;
   }
-  if (str == "UINT16") {
-    return ASTL_VALUE_UINT16;
-  }
-  if (str == "UINT32") {
-    return ASTL_VALUE_UINT32;
-  }
-  if (str == "UINT64") {
-    return ASTL_VALUE_UINT64;
-  }
-  if (str == "FLOAT32") {
-    return ASTL_VALUE_FLOAT32;
-  }
-  if (str == "FLOAT64") {
-    return ASTL_VALUE_FLOAT64;
-  }
-  if (str == "BOOL8") {
-    return ASTL_VALUE_BOOL8;
-  }
-  return ASTL_VALUE_UNKNOWN;
+  return value_type;
 }
 
 using group_id_t      = uint32_t;
 using data_event_id_t = uint32_t;
 
-}  // namespace mock_sysfs
+}  // namespace mock_scmi
 
 #endif  // INCLUDE_COMMON_HPP_
