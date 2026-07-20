@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
+// SPDX-FileCopyrightText: Copyright 2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -235,7 +235,9 @@ static void HandleLowLevelWrite(const LowLevelWriteRequest& request) {
   fuse_reply_write(request.req, request.size);
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 static constexpr auto LowLevelWrite = []<typename... Args>(Args... args) {
+  // NOLINTNEXTLINE(readability-magic-numbers, cppcoreguidelines-avoid-magic-numbers)
   static_assert(sizeof...(Args) == 6);
   HandleLowLevelWrite(LowLevelWriteRequest{args...});
 };
