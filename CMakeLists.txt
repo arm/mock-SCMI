@@ -53,8 +53,10 @@ set_tests_properties(toolsMockScmiIoctlBackend PROPERTIES LABELS "integration;mo
 target_compile_definitions(MockScmi PRIVATE FUSE_USE_VERSION=316 # make sure to update scripts/lint.sh if this changes
 )
 
-target_include_directories(MockScmi PRIVATE ${FUSE3_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_include_directories(MockScmiIoctlSmokeTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(MockScmi PRIVATE ${FUSE3_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include
+                                            ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+target_include_directories(MockScmiIoctlSmokeTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+                                                          ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
 target_link_directories(MockScmi PRIVATE ${FUSE3_LIBRARY_DIRS})
 
