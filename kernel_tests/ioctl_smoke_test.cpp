@@ -26,9 +26,23 @@ constexpr uint32_t kMissingDataEventId      = 0xDEADBEEF;
 constexpr uint32_t kMissingGroupId          = 0xFFFF;
 constexpr uint64_t kBadSizeGetDeConfig      = _IOC(_IOC_READ | _IOC_WRITE, SCMI_IOCTL_MAGIC, 0x04, sizeof(uint32_t));
 
+struct FutureAbiInfo {
+  scmi_tlm_abi_info v1;
+  uint64_t          future_field;
+};
+
 auto FormatDeImplementationVersion(const scmi_tlm_base_info& info) -> std::string {
   return std::format("{:08X}{:08X}{:08X}{:08X}", info.de_impl_version[0], info.de_impl_version[1],
                      info.de_impl_version[2], info.de_impl_version[3]);
+}
+
+auto FormatDeImplementationVersion(const scmi_tlm_abi_info& info) -> std::string {
+  std::string result;
+  result.reserve(SCMI_TLM_DE_IMPL_UUID_MAX * 2);
+  for (const auto byte : info.de_impl_version) {
+    result += std::format("{:02X}", byte);
+  }
+  return result;
 }
 
 auto OpenDevice(const std::filesystem::path& device_path) -> int {
@@ -84,6 +98,33 @@ int main(int argc, char** argv) {
   std::cout << std::format("info version=0x{:08X} de_impl={} num_des={} num_groups={} num_intervals={} num_shmtis={}\n",
                            info.version, FormatDeImplementationVersion(info), info.num_des, info.num_groups,
                            info.num_intervals, info.num_shmtis);
+
+  scmi_tlm_abi_info abi_info{};
+  abi_info.size = sizeof(abi_info);
+  if (!RunIoctl(file_descriptor, SCMI_TLM_GET_ABI_INFO, &abi_info, "SCMI_TLM_GET_ABI_INFO")) {
+    close(file_descriptor);
+    return 1;
+  }
+  std::cout << std::format(
+      "abi_info size={} abi_version={} abi_features=0x{:08X} features=0x{:08X} de_impl={} num_des={}\n", abi_info.size,
+      abi_info.abi_version, abi_info.abi_features, abi_info.features, FormatDeImplementationVersion(abi_info),
+      abi_info.num_des);
+
+  FutureAbiInfo future_abi_info{};
+  future_abi_info.v1.size = sizeof(future_abi_info);
+  if (!RunIoctl(file_descriptor, SCMI_TLM_GET_ABI_INFO, &future_abi_info, "SCMI_TLM_GET_ABI_INFO future")) {
+    close(file_descriptor);
+    return 1;
+  }
+  std::cout << std::format("abi_info_future driver_size={} abi_version={}\n", future_abi_info.v1.size,
+                           future_abi_info.v1.abi_version);
+
+  scmi_tlm_abi_info too_small_abi_info{};
+  too_small_abi_info.size = sizeof(uint32_t);
+  if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_GET_ABI_INFO, &too_small_abi_info, "abi_info_too_small", EINVAL)) {
+    close(file_descriptor);
+    return 1;
+  }
 
   scmi_tlm_config target_config{};
   if (!RunIoctl(file_descriptor, SCMI_TLM_GET_CFG, &target_config, "SCMI_TLM_GET_CFG")) {

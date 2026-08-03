@@ -31,6 +31,7 @@ constexpr uint32_t kMajorVersionShift = 16;
 constexpr uint32_t kDefaultDataSize   = 8;
 constexpr uint32_t kUint64DataSize    = 8;
 constexpr size_t   kHexDigitsPerWord  = 8;
+constexpr size_t   kHexDigitsPerByte  = 2;
 
 template <typename T>
 auto ReplyWith(const T& value) -> IoctlReply {
@@ -105,6 +106,29 @@ auto ParseDeImplementationVersion(const std::string& version) -> std::array<uint
   return words;
 }
 
+auto ParseDeImplementationUuid(const std::string& version) -> std::array<uint8_t, SCMI_TLM_DE_IMPL_UUID_MAX> {
+  std::string version_text{version};
+  if (version_text.starts_with("0x") || version_text.starts_with("0X")) {
+    version_text.erase(0, 2);
+  }
+
+  std::string hex_digits;
+  hex_digits.reserve(SCMI_TLM_DE_IMPL_UUID_MAX * kHexDigitsPerByte);
+  for (unsigned char character : version_text) {
+    if (std::isxdigit(character) != 0) {
+      hex_digits.push_back(static_cast<char>(character));
+    }
+  }
+  hex_digits.resize(SCMI_TLM_DE_IMPL_UUID_MAX * kHexDigitsPerByte, '0');
+
+  std::array<uint8_t, SCMI_TLM_DE_IMPL_UUID_MAX> bytes{};
+  for (size_t index = 0; index < bytes.size(); ++index) {
+    bytes.at(index) = static_cast<uint8_t>(
+        std::stoul(hex_digits.substr(index * kHexDigitsPerByte, kHexDigitsPerByte), nullptr, kHexRadix));
+  }
+  return bytes;
+}
+
 auto DataSize(astl_value_type_t value_type) -> uint32_t {
   auto data_size = kDefaultDataSize;
   switch (value_type) {
@@ -169,7 +193,7 @@ auto UnitExponent(const std::string& unit_exp) -> int32_t {
 auto ActiveInterval(const update_interval_t& interval) -> scmi_tlm_update_interval {
   return scmi_tlm_update_interval{
       .secs = static_cast<uint32_t>(interval.first.count()),
-      .exp  = static_cast<uint32_t>(interval.second),
+      .exp  = interval.second,
   };
 }
 
@@ -184,6 +208,27 @@ auto BuildBaseInfo(SCMITelemetryTarget& tlm) -> scmi_tlm_base_info {
   info.num_intervals = static_cast<uint32_t>(tlm.GetAvailableUpdateIntervals().size());
   info.num_shmtis    = 0;
   info.flags         = 0;
+  return info;
+}
+
+auto BuildAbiInfo(SCMITelemetryTarget& tlm) -> scmi_tlm_abi_info {
+  scmi_tlm_abi_info info{};
+  info.size        = sizeof(info);
+  info.abi_version = SCMI_TLM_CURRENT_ABI_VERSION;
+
+  const auto implementation_uuid = ParseDeImplementationUuid(tlm.GetDEImplementationVersion());
+  std::span<uint8_t, SCMI_TLM_DE_IMPL_UUID_MAX> de_impl_version{info.de_impl_version};
+  std::ranges::copy(implementation_uuid, de_impl_version.begin());
+
+  info.num_des       = static_cast<uint32_t>(tlm.GetDataEvents().size());
+  info.num_groups    = static_cast<uint32_t>(tlm.GetGroups().size());
+  info.num_intervals = static_cast<uint32_t>(tlm.GetAvailableUpdateIntervals().size());
+  info.num_shmtis    = 0;
+
+  // Do not advertise optional operations until the mock implements their
+  // complete behavior. V6 clients use these bits to choose safe fallbacks.
+  info.abi_features = SCMI_TLM_ABI_FEAT_RESET;
+  info.features     = 0;
   return info;
 }
 
@@ -300,6 +345,31 @@ auto HandleGetInfo(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz
   return ReplyWith(BuildBaseInfo(tlm));
 }
 
+auto HandleGetAbiInfo(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz) -> IoctlReply {
+  uint32_t requested_size{};
+  if (!ReadInput(in_buf, in_bufsz, requested_size)) {
+    return {.error_code = EFAULT};
+  }
+  if (requested_size < sizeof(scmi_tlm_abi_info)) {
+    return {.error_code = EINVAL};
+  }
+  if (in_bufsz < sizeof(scmi_tlm_abi_info)) {
+    return {.error_code = EFAULT};
+  }
+  const auto* bytes          = static_cast<const unsigned char*>(in_buf);
+  const auto  available_size = std::min(static_cast<size_t>(requested_size), in_bufsz);
+  if (std::ranges::any_of(std::span{bytes + sizeof(scmi_tlm_abi_info), available_size - sizeof(scmi_tlm_abi_info)},
+                          [](unsigned char byte) { return byte != 0; })) {
+    return {.error_code = EFAULT};
+  }
+
+  const auto abi_info = BuildAbiInfo(tlm);
+  IoctlReply reply{};
+  reply.output.resize(available_size);
+  std::memcpy(reply.output.data(), &abi_info, sizeof(abi_info));
+  return reply;
+}
+
 // cppcheck-suppress constParameterReference // Ioctl handlers share a callback signature with mutating handlers.
 auto HandleGetConfig(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz) -> IoctlReply {
   (void)in_buf;
@@ -379,6 +449,11 @@ auto FindIoctlCommandHandler(unsigned int cmd) -> IoctlCommandHandler {
   return it != handlers.end() ? it->second : nullptr;
 }
 
+auto IsGetAbiInfoCommand(unsigned int cmd) -> bool {
+  return _IOC_TYPE(cmd) == SCMI_TLM_IOCTL_MAGIC && _IOC_NR(cmd) == _IOC_NR(SCMI_TLM_GET_ABI_INFO) &&
+         _IOC_DIR(cmd) == (_IOC_READ | _IOC_WRITE) && _IOC_SIZE(cmd) >= sizeof(uint32_t);
+}
+
 }  // namespace
 
 auto InitProtocolScmiIoctl(FileSystemNode* g_root, const std::optional<std::string>& config_file_path) -> void {
@@ -392,6 +467,13 @@ auto InitProtocolScmiIoctl(FileSystemNode* g_root, const std::optional<std::stri
 auto HandleProtocolScmiIoctl(const FileSystemNode* node, unsigned int cmd, const void* in_buf, size_t in_bufsz)
     -> IoctlReply {
   auto& tlm = SCMITelemetryTarget::Instance(ToTargetId(node->GetName()));
+
+  // The encoded ioctl size changes when userspace knows a newer ABI-info
+  // suffix. Dispatch request 0 by its stable type/number/direction and use the
+  // leading size field to negotiate the common V1 prefix.
+  if (IsGetAbiInfoCommand(cmd)) {
+    return HandleGetAbiInfo(tlm, in_buf, in_bufsz);
+  }
 
   const auto handler = FindIoctlCommandHandler(cmd);
   if (handler == nullptr) {
