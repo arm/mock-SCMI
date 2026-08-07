@@ -8,15 +8,16 @@
 #include <array>
 #include <cctype>
 #include <cerrno>
-#include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <format>
+#include <limits>
 #include <span>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "common.hpp"
 #include "fsnode.hpp"
@@ -27,11 +28,9 @@
 namespace mock_scmi {
 namespace {
 
-constexpr uint32_t kMajorVersionShift = 16;
-constexpr uint32_t kDefaultDataSize   = 8;
-constexpr uint32_t kUint64DataSize    = 8;
-constexpr size_t   kHexDigitsPerWord  = 8;
-constexpr size_t   kHexDigitsPerByte  = 2;
+constexpr uint32_t kDefaultDataSize  = 8;
+constexpr uint32_t kUint64DataSize   = 8;
+constexpr size_t   kHexDigitsPerByte = 2;
 
 template <typename T>
 auto ReplyWith(const T& value) -> IoctlReply {
@@ -64,64 +63,22 @@ auto ToTargetId(std::string device_name) -> std::string {
   return device_name;
 }
 
-auto ParseVersion(const std::string& version) -> uint32_t {
-  uint32_t major = 0;
-  uint32_t minor = 0;
-
-  const auto dot             = version.find('.');
-  auto       parse_component = [](std::string_view text, uint32_t& output) {
-    const auto* begin = text.data();
-    const auto* end   = text.data() + text.size();
-    std::from_chars(begin, end, output);
-  };
-
-  parse_component(std::string_view{version}.substr(0, dot), major);
-  if (dot != std::string::npos) {
-    parse_component(std::string_view{version}.substr(dot + 1), minor);
-  }
-  return (major << kMajorVersionShift) | minor;
-}
-
-auto ParseDeImplementationVersion(const std::string& version) -> std::array<uint32_t, SCMI_TLM_DE_IMPL_MAX_DWORDS> {
+auto ParseDeImplementationUuid(const std::string& version) -> std::array<uint8_t, SCMI_TLM_DE_IMPL_UUID_SZ> {
   std::string version_text{version};
   if (version_text.starts_with("0x") || version_text.starts_with("0X")) {
     version_text.erase(0, 2);
   }
 
   std::string hex_digits;
-  hex_digits.reserve(SCMI_TLM_DE_IMPL_MAX_DWORDS * kHexDigitsPerWord);
+  hex_digits.reserve(SCMI_TLM_DE_IMPL_UUID_SZ * kHexDigitsPerByte);
   for (unsigned char character : version_text) {
     if (std::isxdigit(character) != 0) {
       hex_digits.push_back(static_cast<char>(character));
     }
   }
+  hex_digits.resize(SCMI_TLM_DE_IMPL_UUID_SZ * kHexDigitsPerByte, '0');
 
-  hex_digits.resize(SCMI_TLM_DE_IMPL_MAX_DWORDS * kHexDigitsPerWord, '0');
-
-  std::array<uint32_t, SCMI_TLM_DE_IMPL_MAX_DWORDS> words{};
-  for (size_t index = 0; index < words.size(); ++index) {
-    words.at(index) = static_cast<uint32_t>(
-        std::stoul(hex_digits.substr(index * kHexDigitsPerWord, kHexDigitsPerWord), nullptr, kHexRadix));
-  }
-  return words;
-}
-
-auto ParseDeImplementationUuid(const std::string& version) -> std::array<uint8_t, SCMI_TLM_DE_IMPL_UUID_MAX> {
-  std::string version_text{version};
-  if (version_text.starts_with("0x") || version_text.starts_with("0X")) {
-    version_text.erase(0, 2);
-  }
-
-  std::string hex_digits;
-  hex_digits.reserve(SCMI_TLM_DE_IMPL_UUID_MAX * kHexDigitsPerByte);
-  for (unsigned char character : version_text) {
-    if (std::isxdigit(character) != 0) {
-      hex_digits.push_back(static_cast<char>(character));
-    }
-  }
-  hex_digits.resize(SCMI_TLM_DE_IMPL_UUID_MAX * kHexDigitsPerByte, '0');
-
-  std::array<uint8_t, SCMI_TLM_DE_IMPL_UUID_MAX> bytes{};
+  std::array<uint8_t, SCMI_TLM_DE_IMPL_UUID_SZ> bytes{};
   for (size_t index = 0; index < bytes.size(); ++index) {
     bytes.at(index) = static_cast<uint8_t>(
         std::stoul(hex_digits.substr(index * kHexDigitsPerByte, kHexDigitsPerByte), nullptr, kHexRadix));
@@ -197,27 +154,13 @@ auto ActiveInterval(const update_interval_t& interval) -> scmi_tlm_update_interv
   };
 }
 
-auto BuildBaseInfo(SCMITelemetryTarget& tlm) -> scmi_tlm_base_info {
-  scmi_tlm_base_info info{};
-  info.version       = ParseVersion(tlm.GetVersion());
-  const auto version = ParseDeImplementationVersion(tlm.GetDEImplementationVersion());
-  std::span<uint32_t, SCMI_TLM_DE_IMPL_MAX_DWORDS> de_impl_version{info.de_impl_version};
-  std::ranges::copy(version, de_impl_version.begin());
-  info.num_des       = static_cast<uint32_t>(tlm.GetDataEvents().size());
-  info.num_groups    = static_cast<uint32_t>(tlm.GetGroups().size());
-  info.num_intervals = static_cast<uint32_t>(tlm.GetAvailableUpdateIntervals().size());
-  info.num_shmtis    = 0;
-  info.flags         = 0;
-  return info;
-}
-
 auto BuildAbiInfo(SCMITelemetryTarget& tlm) -> scmi_tlm_abi_info {
   scmi_tlm_abi_info info{};
   info.size        = sizeof(info);
   info.abi_version = SCMI_TLM_CURRENT_ABI_VERSION;
 
   const auto implementation_uuid = ParseDeImplementationUuid(tlm.GetDEImplementationVersion());
-  std::span<uint8_t, SCMI_TLM_DE_IMPL_UUID_MAX> de_impl_version{info.de_impl_version};
+  std::span<uint8_t, SCMI_TLM_DE_IMPL_UUID_SZ> de_impl_version{info.primary_de_impl_version};
   std::ranges::copy(implementation_uuid, de_impl_version.begin());
 
   info.num_des       = static_cast<uint32_t>(tlm.GetDataEvents().size());
@@ -225,9 +168,7 @@ auto BuildAbiInfo(SCMITelemetryTarget& tlm) -> scmi_tlm_abi_info {
   info.num_intervals = static_cast<uint32_t>(tlm.GetAvailableUpdateIntervals().size());
   info.num_shmtis    = 0;
 
-  // Do not advertise optional operations until the mock implements their
-  // complete behavior. V6 clients use these bits to choose safe fallbacks.
-  info.abi_features = SCMI_TLM_ABI_FEAT_RESET;
+  info.abi_features = SCMI_TLM_ABI_FEAT_BATCH_STATE | SCMI_TLM_ABI_FEAT_BATCHED_CFG | SCMI_TLM_ABI_FEAT_DE_TRACKING;
   info.features     = 0;
   return info;
 }
@@ -245,18 +186,24 @@ auto SetTargetConfig(SCMITelemetryTarget& tlm, const scmi_tlm_config& config) ->
   return GetTargetConfig(tlm);
 }
 
-auto GetDataEventConfig(const DataEvent& data_event) -> scmi_tlm_de_config {
+auto GetDataEventConfig(const SCMITelemetryTarget& tlm, const DataEvent& data_event) -> scmi_tlm_de_config {
   scmi_tlm_de_config config{};
   config.id       = data_event.id_;
   config.enable   = data_event.enable_ ? 1U : 0U;
   config.t_enable = data_event.tstamp_enable_ ? 1U : 0U;
+  if (data_event.enable_) {
+    config.sid                     = SCMI_TLM_SHMTI_ID_INVALID;
+    const auto implementation_uuid = ParseDeImplementationUuid(tlm.GetDEImplementationVersion());
+    std::ranges::copy(implementation_uuid, config.uuid);
+  }
   return config;
 }
 
-auto SetDataEventConfig(DataEvent& data_event, const scmi_tlm_de_config& requested_config) -> scmi_tlm_de_config {
+auto SetDataEventConfig(const SCMITelemetryTarget& tlm, DataEvent& data_event,
+                        const scmi_tlm_de_config& requested_config) -> scmi_tlm_de_config {
   data_event.enable_        = requested_config.enable != 0;
   data_event.tstamp_enable_ = requested_config.t_enable != 0;
-  return GetDataEventConfig(data_event);
+  return GetDataEventConfig(tlm, data_event);
 }
 
 auto GetDataEventInfo(const DataEvent& data_event) -> scmi_tlm_de_info {
@@ -339,12 +286,6 @@ auto WithDataEvent(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz
   });
 }
 
-auto HandleGetInfo(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz) -> IoctlReply {
-  (void)in_buf;
-  (void)in_bufsz;
-  return ReplyWith(BuildBaseInfo(tlm));
-}
-
 auto HandleGetAbiInfo(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz) -> IoctlReply {
   uint32_t requested_size{};
   if (!ReadInput(in_buf, in_bufsz, requested_size)) {
@@ -370,7 +311,8 @@ auto HandleGetAbiInfo(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bu
   return reply;
 }
 
-// cppcheck-suppress constParameterReference // Ioctl handlers share a callback signature with mutating handlers.
+// cppcheck-suppress constParameterReference // Ioctl handlers share a callback
+// signature with mutating handlers.
 auto HandleGetConfig(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz) -> IoctlReply {
   (void)in_buf;
   (void)in_bufsz;
@@ -382,17 +324,59 @@ auto HandleSetConfig(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_buf
       in_buf, in_bufsz, [&tlm](const scmi_tlm_config& config) { return ReplyWith(SetTargetConfig(tlm, config)); });
 }
 
+auto HandleDataEventConfigBatch(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz, bool set) -> IoctlReply {
+  scmi_tlm_batch batch{};
+  if (!ReadInput(in_buf, in_bufsz, batch) || batch.reserved != 0 || batch.item_sz != sizeof(scmi_tlm_de_config)) {
+    return {.error_code = EINVAL};
+  }
+  if (batch.num_items > std::numeric_limits<size_t>::max() / batch.item_sz) {
+    return {.error_code = EINVAL};
+  }
+
+  const size_t items_size  = static_cast<size_t>(batch.num_items) * batch.item_sz;
+  const size_t states_size = batch.states != 0 ? static_cast<size_t>(batch.num_items) * sizeof(int32_t) : 0;
+  if (items_size > std::numeric_limits<size_t>::max() - sizeof(batch) ||
+      states_size > std::numeric_limits<size_t>::max() - sizeof(batch) - items_size) {
+    return {.error_code = EINVAL};
+  }
+  const size_t flattened_size = sizeof(batch) + items_size + states_size;
+  if (in_buf == nullptr || in_bufsz < flattened_size) {
+    return {.error_code = EFAULT};
+  }
+
+  std::vector<scmi_tlm_de_config> configs(batch.num_items);
+  const auto*                     bytes = static_cast<const char*>(in_buf);
+  std::memcpy(configs.data(), bytes + sizeof(batch), items_size);
+  std::vector<int32_t> states(batch.num_items);
+
+  for (uint32_t index = 0; index < batch.num_items; ++index) {
+    DataEvent* data_event = tlm.GetDataEventById(configs[index].id);
+    if (data_event == nullptr) {
+      if (batch.states == 0) {
+        return {.error_code = EINVAL};
+      }
+      states[index] = -EINVAL;
+      continue;
+    }
+    configs[index] = set ? SetDataEventConfig(tlm, *data_event, configs[index]) : GetDataEventConfig(tlm, *data_event);
+  }
+
+  IoctlReply reply{};
+  reply.output.resize(flattened_size);
+  std::memcpy(reply.output.data(), &batch, sizeof(batch));
+  std::memcpy(reply.output.data() + sizeof(batch), configs.data(), items_size);
+  if (states_size != 0) {
+    std::memcpy(reply.output.data() + sizeof(batch) + items_size, states.data(), states_size);
+  }
+  return reply;
+}
+
 auto HandleGetDataEventConfig(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz) -> IoctlReply {
-  return WithDataEvent<scmi_tlm_de_config>(
-      tlm, in_buf, in_bufsz,
-      [](const scmi_tlm_de_config&, const DataEvent& data_event) { return ReplyWith(GetDataEventConfig(data_event)); });
+  return HandleDataEventConfigBatch(tlm, in_buf, in_bufsz, false);
 }
 
 auto HandleSetDataEventConfig(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz) -> IoctlReply {
-  return WithDataEvent<scmi_tlm_de_config>(tlm, in_buf, in_bufsz,
-                                           [](const scmi_tlm_de_config& config, DataEvent& data_event) {
-                                             return ReplyWith(SetDataEventConfig(data_event, config));
-                                           });
+  return HandleDataEventConfigBatch(tlm, in_buf, in_bufsz, true);
 }
 
 auto HandleGetDataEventInfo(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz) -> IoctlReply {
@@ -408,7 +392,8 @@ auto HandleGetDataEventValue(SCMITelemetryTarget& tlm, const void* in_buf, size_
                                            });
 }
 
-// cppcheck-suppress constParameterReference // Ioctl handlers share a callback signature with mutating handlers.
+// cppcheck-suppress constParameterReference // Ioctl handlers share a callback
+// signature with mutating handlers.
 auto HandleGetAllConfig(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz) -> IoctlReply {
   (void)in_buf;
   (void)in_bufsz;
@@ -433,13 +418,13 @@ using IoctlCommandHandler = IoctlReply (*)(SCMITelemetryTarget&, const void*, si
 
 auto FindIoctlCommandHandler(unsigned int cmd) -> IoctlCommandHandler {
   static const std::unordered_map<unsigned int, IoctlCommandHandler> handlers = {
-      {SCMI_TLM_GET_INFO,     HandleGetInfo            },
+      {SCMI_TLM_GET_ABI_INFO, HandleGetAbiInfo         },
       {SCMI_TLM_GET_CFG,      HandleGetConfig          },
       {SCMI_TLM_SET_CFG,      HandleSetConfig          },
       {SCMI_TLM_GET_DE_CFG,   HandleGetDataEventConfig },
       {SCMI_TLM_SET_DE_CFG,   HandleSetDataEventConfig },
       {SCMI_TLM_GET_DE_INFO,  HandleGetDataEventInfo   },
-      {SCMI_TLM_GET_DE_VALUE, HandleGetDataEventValue  },
+      {SCMI_TLM_DE_READ,      HandleGetDataEventValue  },
       {SCMI_TLM_GET_ALL_CFG,  HandleGetAllConfig       },
       {SCMI_TLM_SET_ALL_CFG,  HandleSetAllConfig       },
       {SCMI_TLM_GET_GRP_INFO, HandleGetGroupInfoCommand},
@@ -447,11 +432,6 @@ auto FindIoctlCommandHandler(unsigned int cmd) -> IoctlCommandHandler {
 
   const auto it = handlers.find(cmd);
   return it != handlers.end() ? it->second : nullptr;
-}
-
-auto IsGetAbiInfoCommand(unsigned int cmd) -> bool {
-  return _IOC_TYPE(cmd) == SCMI_TLM_IOCTL_MAGIC && _IOC_NR(cmd) == _IOC_NR(SCMI_TLM_GET_ABI_INFO) &&
-         _IOC_DIR(cmd) == (_IOC_READ | _IOC_WRITE) && _IOC_SIZE(cmd) >= sizeof(uint32_t);
 }
 
 }  // namespace
@@ -467,13 +447,6 @@ auto InitProtocolScmiIoctl(FileSystemNode* g_root, const std::optional<std::stri
 auto HandleProtocolScmiIoctl(const FileSystemNode* node, unsigned int cmd, const void* in_buf, size_t in_bufsz)
     -> IoctlReply {
   auto& tlm = SCMITelemetryTarget::Instance(ToTargetId(node->GetName()));
-
-  // The encoded ioctl size changes when userspace knows a newer ABI-info
-  // suffix. Dispatch request 0 by its stable type/number/direction and use the
-  // leading size field to negotiate the common V1 prefix.
-  if (IsGetAbiInfoCommand(cmd)) {
-    return HandleGetAbiInfo(tlm, in_buf, in_bufsz);
-  }
 
   const auto handler = FindIoctlCommandHandler(cmd);
   if (handler == nullptr) {

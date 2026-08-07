@@ -1,5 +1,4 @@
-info version=0x00010000 de_impl=CAFEBABECAFEBABECAFEBABEBEEF0000 num_des=7 num_groups=2 num_intervals=3 num_shmtis=0
-abi_info size=56 abi_version=1 abi_features=0x00000001 features=0x00000000 de_impl=CAFEBABECAFEBABECAFEBABEBEEF0000 num_des=7
+abi_info size=56 abi_version=1 abi_features=0x00000038 features=0x00000000 de_impl=CAFEBABECAFEBABECAFEBABEBEEF0000 num_des=7
 abi_info_future driver_size=56 abi_version=1
 abi_info_too_small errno=22
 cfg enable=1 t_enable=1 active=1,0
@@ -23,7 +22,7 @@ unsupported_get_intervals errno=25
 unsupported_get_de_list errno=25
 unsupported_get_group_list errno=25
 unsupported_get_group_desc errno=25
-unsupported_single_sample errno=25
+unsupported_single_read errno=25
 unsupported_bulk_read errno=25
 unsupported_batch_read errno=25
 unsupported_get_shmti_list errno=25

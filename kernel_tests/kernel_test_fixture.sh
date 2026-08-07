@@ -116,7 +116,14 @@ echo 'Start of test output...'
 
 # Launch whatever command we want to use as our unit test
 cd "${MOUNT_POINT}"
-"$@" |& tee "${ACTUAL_OUTPUT}"
+COMMAND_STATUS=0
+"$@" |& tee "${ACTUAL_OUTPUT}" || COMMAND_STATUS=$?
+if ((COMMAND_STATUS != 0)); then
+	kill -SIGTERM "${SYSFS_PROCESS}" 2>/dev/null || true
+	wait "${SYSFS_PROCESS}" || true
+	rm -rf "${TMP_DIR}"
+	exit "${COMMAND_STATUS}"
+fi
 
 # Give valgrind time to flushs its output.
 # Without this, the `wait` below will hang because the `kill` command doesn't really terminate the process and/or its children.

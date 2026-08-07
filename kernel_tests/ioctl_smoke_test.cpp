@@ -24,22 +24,18 @@ constexpr uint32_t kWattsDataEventId        = 0x00009E4F;
 constexpr uint32_t kMegahertzDataEventId    = 0x00001A68;
 constexpr uint32_t kMissingDataEventId      = 0xDEADBEEF;
 constexpr uint32_t kMissingGroupId          = 0xFFFF;
-constexpr uint64_t kBadSizeGetDeConfig      = _IOC(_IOC_READ | _IOC_WRITE, SCMI_IOCTL_MAGIC, 0x04, sizeof(uint32_t));
+constexpr int      kSkipCode                = 77;
+constexpr uint64_t kBadSizeGetDeConfig = _IOC(_IOC_READ | _IOC_WRITE, SCMI_TLM_IOCTL_MAGIC, 0x04, sizeof(uint32_t));
 
 struct FutureAbiInfo {
   scmi_tlm_abi_info v1;
   uint64_t          future_field;
 };
 
-auto FormatDeImplementationVersion(const scmi_tlm_base_info& info) -> std::string {
-  return std::format("{:08X}{:08X}{:08X}{:08X}", info.de_impl_version[0], info.de_impl_version[1],
-                     info.de_impl_version[2], info.de_impl_version[3]);
-}
-
 auto FormatDeImplementationVersion(const scmi_tlm_abi_info& info) -> std::string {
   std::string result;
-  result.reserve(SCMI_TLM_DE_IMPL_UUID_MAX * 2);
-  for (const auto byte : info.de_impl_version) {
+  result.reserve(SCMI_TLM_DE_IMPL_UUID_SZ * 2);
+  for (const auto byte : info.primary_de_impl_version) {
     result += std::format("{:02X}", byte);
   }
   return result;
@@ -57,6 +53,16 @@ auto RunIoctl(int file_descriptor, uint64_t request, void* arg, const char* name
     return false;
   }
   return true;
+}
+
+auto MakeDeConfigBatch(scmi_tlm_de_config& config) -> scmi_tlm_batch {
+  return scmi_tlm_batch{
+      .num_items = 1,
+      .item_sz   = sizeof(config),
+      .reserved  = 0,
+      .states    = 0,
+      .items     = reinterpret_cast<uint64_t>(&config),  // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+  };
 }
 
 auto RunIoctlExpectErr(int file_descriptor, uint64_t request, void* arg, const char* name, int expected_errno) -> bool {
@@ -89,15 +95,6 @@ int main(int argc, char** argv) {
     std::cerr << "open failed: " << std::strerror(errno) << '\n';
     return 1;
   }
-
-  scmi_tlm_base_info info{};
-  if (!RunIoctl(file_descriptor, SCMI_TLM_GET_INFO, &info, "SCMI_TLM_GET_INFO")) {
-    close(file_descriptor);
-    return 1;
-  }
-  std::cout << std::format("info version=0x{:08X} de_impl={} num_des={} num_groups={} num_intervals={} num_shmtis={}\n",
-                           info.version, FormatDeImplementationVersion(info), info.num_des, info.num_groups,
-                           info.num_intervals, info.num_shmtis);
 
   scmi_tlm_abi_info abi_info{};
   abi_info.size = sizeof(abi_info);
@@ -144,16 +141,23 @@ int main(int argc, char** argv) {
                            static_cast<int>(target_config.t_enable));
 
   scmi_tlm_de_config de_config{};
-  de_config.id = kSmokeTestDataEventId;
-  if (!RunIoctl(file_descriptor, SCMI_TLM_GET_DE_CFG, &de_config, "SCMI_TLM_GET_DE_CFG")) {
+  de_config.id         = kSmokeTestDataEventId;
+  auto de_config_batch = MakeDeConfigBatch(de_config);
+  if (!RunIoctl(file_descriptor, SCMI_TLM_GET_DE_CFG, &de_config_batch, "SCMI_TLM_GET_DE_CFG")) {
+    const int error_number = errno;
     close(file_descriptor);
+    if (error_number == EIO) {
+      std::cerr << "Skipping batched ioctl smoke test: regular FUSE filesystems cannot fetch nested userspace "
+                   "buffers for restricted ioctls\n";
+      return kSkipCode;
+    }
     return 1;
   }
   std::cout << std::format("de_cfg_before id=0x{:08X} enable={} t_enable={}\n", de_config.id, de_config.enable,
                            de_config.t_enable);
 
   de_config.enable = 1;
-  if (!RunIoctl(file_descriptor, SCMI_TLM_SET_DE_CFG, &de_config, "SCMI_TLM_SET_DE_CFG")) {
+  if (!RunIoctl(file_descriptor, SCMI_TLM_SET_DE_CFG, &de_config_batch, "SCMI_TLM_SET_DE_CFG")) {
     close(file_descriptor);
     return 1;
   }
@@ -162,7 +166,7 @@ int main(int argc, char** argv) {
 
   scmi_tlm_de_sample disabled_sample{};
   disabled_sample.id = kSmokeTestDataEventId;
-  if (!RunIoctl(file_descriptor, SCMI_TLM_GET_DE_VALUE, &disabled_sample, "SCMI_TLM_GET_DE_VALUE disabled")) {
+  if (!RunIoctl(file_descriptor, SCMI_TLM_DE_READ, &disabled_sample, "SCMI_TLM_DE_READ disabled")) {
     close(file_descriptor);
     return 1;
   }
@@ -203,7 +207,7 @@ int main(int argc, char** argv) {
 
   scmi_tlm_de_sample sample{};
   sample.id = kSmokeTestDataEventId;
-  if (!RunIoctl(file_descriptor, SCMI_TLM_GET_DE_VALUE, &sample, "SCMI_TLM_GET_DE_VALUE")) {
+  if (!RunIoctl(file_descriptor, SCMI_TLM_DE_READ, &sample, "SCMI_TLM_DE_READ")) {
     close(file_descriptor);
     return 1;
   }
@@ -225,8 +229,9 @@ int main(int argc, char** argv) {
   std::cout << std::format("all_de_cfg_after enable={} t_enable={}\n", all_de_config.enable, all_de_config.t_enable);
 
   scmi_tlm_de_config disabled_de_config{};
-  disabled_de_config.id = kSmokeTestDataEventId;
-  if (!RunIoctl(file_descriptor, SCMI_TLM_GET_DE_CFG, &disabled_de_config, "SCMI_TLM_GET_DE_CFG after all")) {
+  disabled_de_config.id         = kSmokeTestDataEventId;
+  auto disabled_de_config_batch = MakeDeConfigBatch(disabled_de_config);
+  if (!RunIoctl(file_descriptor, SCMI_TLM_GET_DE_CFG, &disabled_de_config_batch, "SCMI_TLM_GET_DE_CFG after all")) {
     close(file_descriptor);
     return 1;
   }
@@ -251,8 +256,9 @@ int main(int argc, char** argv) {
                            group_info.num_intervals);
 
   scmi_tlm_de_config missing_de_config{};
-  missing_de_config.id = kMissingDataEventId;
-  if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_GET_DE_CFG, &missing_de_config, "missing_de_cfg", EINVAL)) {
+  missing_de_config.id         = kMissingDataEventId;
+  auto missing_de_config_batch = MakeDeConfigBatch(missing_de_config);
+  if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_GET_DE_CFG, &missing_de_config_batch, "missing_de_cfg", EINVAL)) {
     close(file_descriptor);
     return 1;
   }
@@ -294,7 +300,7 @@ int main(int argc, char** argv) {
   }
 
   scmi_tlm_data_read data_read{};
-  if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_SINGLE_SAMPLE, &data_read, "unsupported_single_sample", ENOTTY)) {
+  if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_SINGLE_READ, &data_read, "unsupported_single_read", ENOTTY)) {
     close(file_descriptor);
     return 1;
   }
@@ -322,8 +328,9 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  scmi_tlm_base_info second_info{};
-  if (!RunIoctl(second_file_descriptor, SCMI_TLM_GET_INFO, &second_info, "SCMI_TLM_GET_INFO tlm_1")) {
+  scmi_tlm_abi_info second_info{};
+  second_info.size = sizeof(second_info);
+  if (!RunIoctl(second_file_descriptor, SCMI_TLM_GET_ABI_INFO, &second_info, "SCMI_TLM_GET_ABI_INFO tlm_1")) {
     close(second_file_descriptor);
     close(file_descriptor);
     return 1;
@@ -331,8 +338,9 @@ int main(int argc, char** argv) {
   std::cout << std::format("info_tlm_1 de_impl={}\n", FormatDeImplementationVersion(second_info));
 
   scmi_tlm_de_config second_de_config{};
-  second_de_config.id = kSecondTargetDataEventId;
-  if (!RunIoctl(second_file_descriptor, SCMI_TLM_GET_DE_CFG, &second_de_config, "SCMI_TLM_GET_DE_CFG tlm_1")) {
+  second_de_config.id         = kSecondTargetDataEventId;
+  auto second_de_config_batch = MakeDeConfigBatch(second_de_config);
+  if (!RunIoctl(second_file_descriptor, SCMI_TLM_GET_DE_CFG, &second_de_config_batch, "SCMI_TLM_GET_DE_CFG tlm_1")) {
     close(second_file_descriptor);
     close(file_descriptor);
     return 1;

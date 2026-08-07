@@ -4,14 +4,21 @@
 
 #include "mock_scmi.hpp"
 
+#include <sys/uio.h>
+
 #include <algorithm>
+#include <array>
+#include <cstdint>
+#include <cstring>
 #include <iostream>
+#include <limits>
 
 #include "common.hpp"
 #include "fsnode.hpp"
 #include "protocol.hpp"
 #include "protocol_scmi_ioctl.hpp"
 #include "scmi_backend_selection.hpp"
+#include "scmi_ioctl_uapi.hpp"
 
 namespace mock_scmi {
 
@@ -291,10 +298,48 @@ struct LowLevelIoctlRequest {
   fuse_req_t       request;
   fuse_ino_t       inode;
   FuseIoctlCommand command;
+  void*            argument;
   const void*      input_buffer;
   size_t           input_buffer_size;
   size_t           output_buffer_size;
 };
+
+static auto RetryBatchIoctl(const LowLevelIoctlRequest& request) -> bool {
+  if (request.command != SCMI_TLM_GET_DE_CFG && request.command != SCMI_TLM_SET_DE_CFG) {
+    return false;
+  }
+  if (request.input_buffer_size != sizeof(scmi_tlm_batch)) {
+    return false;
+  }
+
+  scmi_tlm_batch batch{};
+  std::memcpy(&batch, request.input_buffer, sizeof(batch));
+  if (batch.num_items == 0) {
+    return false;
+  }
+  if (batch.item_sz != sizeof(scmi_tlm_de_config) ||
+      batch.num_items > std::numeric_limits<size_t>::max() / batch.item_sz) {
+    fuse_reply_err(request.request, EINVAL);
+    return true;
+  }
+
+  const size_t         items_size  = static_cast<size_t>(batch.num_items) * batch.item_sz;
+  const size_t         states_size = static_cast<size_t>(batch.num_items) * sizeof(int32_t);
+  std::array<iovec, 3> input_iov{};
+  std::array<iovec, 3> output_iov{};
+  input_iov[0]     = iovec{.iov_base = request.argument, .iov_len = sizeof(batch)};
+  output_iov[0]    = input_iov[0];
+  input_iov[1]     = iovec{.iov_base = reinterpret_cast<void*>(batch.items), .iov_len = items_size};  // NOLINT
+  output_iov[1]    = input_iov[1];
+  size_t iov_count = 2;
+  if (batch.states != 0) {
+    input_iov[2]  = iovec{.iov_base = reinterpret_cast<void*>(batch.states), .iov_len = states_size};  // NOLINT
+    output_iov[2] = input_iov[2];
+    ++iov_count;
+  }
+  fuse_reply_ioctl_retry(request.request, input_iov.data(), iov_count, output_iov.data(), iov_count);
+  return true;
+}
 
 static void HandleLowLevelIoctl(const LowLevelIoctlRequest& request) {
   std::cout << "ioctl: ino=" << request.inode << ", cmd=" << request.command
@@ -309,6 +354,10 @@ static void HandleLowLevelIoctl(const LowLevelIoctlRequest& request) {
 
   if (node->GetType() == NodeType::DIRECTORY_NODE) {
     fuse_reply_err(request.request, EISDIR);
+    return;
+  }
+
+  if (RetryBatchIoctl(request)) {
     return;
   }
 
@@ -328,44 +377,44 @@ static void HandleLowLevelIoctl(const LowLevelIoctlRequest& request) {
 }
 
 const struct fuse_lowlevel_ops kFuseLowLevelOps = {
-    .init            = LowLevelInit,
-    .destroy         = LowLevelDestroy,
-    .lookup          = LowLevelLookup,
-    .forget          = NULL,
-    .getattr         = LowLevelGetAttr,
-    .setattr         = NULL,
-    .readlink        = NULL,
-    .mknod           = NULL,
-    .mkdir           = NULL,
-    .unlink          = NULL,
-    .rmdir           = NULL,
-    .symlink         = NULL,
-    .rename          = NULL,
-    .link            = NULL,
-    .open            = LowLevelOpen,
-    .read            = LowLevelRead,
-    .write           = LowLevelWrite,
-    .flush           = NULL,
-    .release         = NULL,
-    .fsync           = NULL,
-    .opendir         = LowLevelOpenDir,
-    .readdir         = LowLevelReadDir,
-    .releasedir      = NULL,
-    .fsyncdir        = NULL,
-    .statfs          = NULL,
-    .setxattr        = NULL,
-    .getxattr        = NULL,
-    .listxattr       = NULL,
-    .removexattr     = NULL,
-    .access          = NULL,
-    .create          = NULL,
-    .getlk           = NULL,
-    .setlk           = NULL,
-    .bmap            = NULL,
-    .ioctl           = [](fuse_req_t req, fuse_ino_t ino, FuseIoctlCommand                      cmd, void* /*arg*/,
-                struct fuse_file_info* /*file_info*/, unsigned /*flags*/, const void* in_buf, size_t in_bufsz,
-                size_t out_bufsz) { HandleLowLevelIoctl({req, ino, cmd, in_buf, in_bufsz, out_bufsz}); },
-    .poll            = NULL,
+    .init        = LowLevelInit,
+    .destroy     = LowLevelDestroy,
+    .lookup      = LowLevelLookup,
+    .forget      = NULL,
+    .getattr     = LowLevelGetAttr,
+    .setattr     = NULL,
+    .readlink    = NULL,
+    .mknod       = NULL,
+    .mkdir       = NULL,
+    .unlink      = NULL,
+    .rmdir       = NULL,
+    .symlink     = NULL,
+    .rename      = NULL,
+    .link        = NULL,
+    .open        = LowLevelOpen,
+    .read        = LowLevelRead,
+    .write       = LowLevelWrite,
+    .flush       = NULL,
+    .release     = NULL,
+    .fsync       = NULL,
+    .opendir     = LowLevelOpenDir,
+    .readdir     = LowLevelReadDir,
+    .releasedir  = NULL,
+    .fsyncdir    = NULL,
+    .statfs      = NULL,
+    .setxattr    = NULL,
+    .getxattr    = NULL,
+    .listxattr   = NULL,
+    .removexattr = NULL,
+    .access      = NULL,
+    .create      = NULL,
+    .getlk       = NULL,
+    .setlk       = NULL,
+    .bmap        = NULL,
+    .ioctl = [](fuse_req_t req, fuse_ino_t ino, FuseIoctlCommand cmd, void* arg, struct fuse_file_info* /*file_info*/,
+                unsigned /*flags*/, const void* in_buf, size_t in_bufsz,
+                size_t out_bufsz) { HandleLowLevelIoctl({req, ino, cmd, arg, in_buf, in_bufsz, out_bufsz}); },
+    .poll  = NULL,
     .write_buf       = NULL,
     .retrieve_reply  = NULL,
     .forget_multi    = NULL,
