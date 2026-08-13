@@ -29,7 +29,7 @@ constexpr uint64_t kBadSizeGetDeConfig = _IOC(_IOC_READ | _IOC_WRITE, SCMI_TLM_I
 
 struct FutureAbiInfo {
   scmi_tlm_abi_info v1;
-  uint64_t          future_field;
+  uint64_t          future_field;  // cppcheck-suppress unusedStructMember
 };
 
 auto FormatDeImplementationVersion(const scmi_tlm_abi_info& info) -> std::string {

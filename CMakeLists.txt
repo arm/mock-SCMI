@@ -22,7 +22,7 @@ add_test(
   COMMAND
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockScmi>
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/find/expected.txt ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/find/command.sh)
-set_tests_properties(toolsMockScmiFind PROPERTIES LABELS "integration;mockscmi" SKIP_RETURN_CODE 77)
+set_tests_properties(toolsMockScmiFind PROPERTIES LABELS "integration;mockscmi;valgrind_isolated" SKIP_RETURN_CODE 77)
 
 add_test(
   NAME toolsMockScmiCdPermissions
@@ -30,7 +30,7 @@ add_test(
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockScmi>
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/cd_permissions/expected.txt
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/cd_permissions/command.sh)
-set_tests_properties(toolsMockScmiCdPermissions PROPERTIES LABELS "integration;mockscmi" SKIP_RETURN_CODE 77)
+set_tests_properties(toolsMockScmiCdPermissions PROPERTIES LABELS "integration;mockscmi;valgrind_isolated" SKIP_RETURN_CODE 77)
 
 add_test(
   NAME toolsMockScmiAllDesEnableToIndividualEnableConsistency
@@ -38,7 +38,7 @@ add_test(
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockScmi>
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/all_des_enable_to_individual_enable_consistency/expected.txt
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/all_des_enable_to_individual_enable_consistency/command.sh)
-set_tests_properties(toolsMockScmiAllDesEnableToIndividualEnableConsistency PROPERTIES LABELS "integration;mockscmi"
+set_tests_properties(toolsMockScmiAllDesEnableToIndividualEnableConsistency PROPERTIES LABELS "integration;mockscmi;valgrind_isolated"
                                                                                        SKIP_RETURN_CODE 77)
 
 add_test(
@@ -47,7 +47,7 @@ add_test(
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/kernel_test_fixture.sh $<TARGET_FILE:MockScmi>
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/ioctl_backend/expected.txt bash
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/ioctl_backend/command.sh $<TARGET_FILE:MockScmiIoctlSmokeTest>)
-set_tests_properties(toolsMockScmiIoctlBackend PROPERTIES LABELS "integration;mockscmi" SKIP_RETURN_CODE 77 ENVIRONMENT
+set_tests_properties(toolsMockScmiIoctlBackend PROPERTIES LABELS "integration;mockscmi;valgrind_isolated" SKIP_RETURN_CODE 77 ENVIRONMENT
                                                           "ASTL_SCMI_INTERFACE=ioctl")
 
 target_compile_definitions(MockScmi PRIVATE FUSE_USE_VERSION=316 # make sure to update scripts/lint.sh if this changes
