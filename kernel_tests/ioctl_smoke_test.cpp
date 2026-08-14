@@ -308,7 +308,8 @@ int main(int argc, char** argv) {
     close(file_descriptor);
     return 1;
   }
-  if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_BATCH_READ, &data_read, "unsupported_batch_read", ENOTTY)) {
+  scmi_tlm_batch read_batch{};
+  if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_BATCH_READ, &read_batch, "unsupported_batch_read", ENOTTY)) {
     close(file_descriptor);
     return 1;
   }
