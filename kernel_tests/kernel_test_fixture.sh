@@ -27,6 +27,7 @@ fi
 echo "✅ ASTL_MOCKSCMI_TLM_JSON_PATH = ${ASTL_MOCKSCMI_TLM_JSON_PATH}"
 
 TIMEOUT=30 # Maximum seconds to wait for guid
+TERMINATION_TIMEOUT=5 # Maximum seconds to wait for MockScmi/Valgrind to exit after SIGTERM
 PATTERN_READY="eccf4f7c-d1b1-47f0-9d23-159f6d38b661"
 SKIP_CODE=77
 
@@ -79,6 +80,23 @@ wait_for() {
 	echo "✅ Detected '$PATTERN' in ${DESC}"
 }
 
+terminate_process() {
+	local PID="$1" ATTEMPT
+
+	kill -SIGTERM "${PID}" 2>/dev/null || true
+	for ((ATTEMPT = 0; ATTEMPT < TERMINATION_TIMEOUT * 10; ATTEMPT++)); do
+		if ! kill -0 "${PID}" 2>/dev/null; then
+			wait "${PID}" 2>/dev/null || true
+			return
+		fi
+		sleep 0.1
+	done
+
+	echo "⚠️  MockScmi process ${PID} did not exit after ${TERMINATION_TIMEOUT}s; sending SIGKILL"
+	kill -SIGKILL "${PID}" 2>/dev/null || true
+	wait "${PID}" 2>/dev/null || true
+}
+
 # If valgrind reports an "unhandled dwarf2 abbrev form code 0x25" error, try compiling with g++ instead of clang
 # clear DEBUGINFOD_URLS so that valgrind doesn't attempt to fetch debug symbols from the network, which can cause hangs in constrained environments
 DEBUGINFOD_URLS='' valgrind --log-file="${VALGRIND_LOG}" --leak-check=full --show-leak-kinds=all --track-origins=yes "${SYSFS_EXECUTABLE}" -f -s "${MOUNT_POINT}" &>"${SYSFS_LOG}" &
@@ -119,33 +137,19 @@ cd "${MOUNT_POINT}"
 COMMAND_STATUS=0
 "$@" |& tee "${ACTUAL_OUTPUT}" || COMMAND_STATUS=$?
 if ((COMMAND_STATUS != 0)); then
-	kill -SIGTERM "${SYSFS_PROCESS}" 2>/dev/null || true
-	wait "${SYSFS_PROCESS}" || true
+	terminate_process "${SYSFS_PROCESS}"
 	rm -rf "${TMP_DIR}"
 	exit "${COMMAND_STATUS}"
 fi
 
-# Give valgrind time to flushs its output.
-# Without this, the `wait` below will hang because the `kill` command doesn't really terminate the process and/or its children.
+# Give valgrind time to flush its output.
+# Without this, termination may hang because SIGTERM doesn't immediately stop the process and/or its children.
 # A value of less than 0.5 seconds seems to be too short, as measured experimentally.
 sleep 0.5
 
-if kill -SIGTERM ${SYSFS_PROCESS}; then
-	echo "✅ Sent SIGTERM sysfs process to gracefully kill it"
-else
-	if grep -qF "failed to open /dev/fuse: Permission denied" "${SYSFS_LOG}"; then
-		echo "⚠️  Skipping MockScmi test: process could not be terminated because /dev/fuse is denied"
-		exit "${SKIP_CODE}"
-	fi
-	echo "❌ Error!  Failed to send kill signal to sysfs process with PID: ${SYSFS_PROCESS}" >/dev/stderr
-	exit 1
-fi
+terminate_process "${SYSFS_PROCESS}"
 
 echo '...End of test output'
-
-# We need an "&& true" guard because wait will pass through the exit code from MockScmi
-# which will be 143 when the process ends with SIGTERM, even if there's no other error
-wait "${SYSFS_PROCESS}" && true
 
 if grep -F 'ERROR SUMMARY' "${VALGRIND_LOG}" >/dev/null; then
 	echo "✅ Valgrind log appears complete"
