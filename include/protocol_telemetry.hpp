@@ -118,8 +118,8 @@ struct DataEventConfig {
   data_event_id_t                       data_event_id{};
   bool                                  enable{};
   bool                                  tstamp_enable{};
-  astl_value_t                          last_value{};
-  astl_value_type_t                     value_type{ASTL_VALUE_UNKNOWN};
+  mock_scmi_value_t                     last_value{};
+  mock_scmi_value_type_t                value_type{MOCK_SCMI_VALUE_UNKNOWN};
   std::chrono::system_clock::time_point last_timestamp;
   uint32_t                              compo_instance_id{};
   uint32_t                              compo_type{};
@@ -164,7 +164,7 @@ class DataEvent {
         group_id_(config.group_id) {}
   virtual ~DataEvent() = default;
 
-  virtual astl_value_t Generate() = 0;
+  virtual mock_scmi_value_t Generate() = 0;
 
   /**
    * @brief Gets the timestamp scaled by tstamp_rate_.
@@ -180,8 +180,8 @@ class DataEvent {
   data_event_id_t                       id_;
   bool                                  enable_;
   bool                                  tstamp_enable_;
-  astl_value_t                          last_value_;
-  astl_value_type_t                     value_type_;
+  mock_scmi_value_t                     last_value_;
+  mock_scmi_value_type_t                value_type_;
   std::chrono::system_clock::time_point last_timestamp_;
 
   uint32_t    compo_instance_id_;

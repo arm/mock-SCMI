@@ -32,12 +32,12 @@ class RandomDataEvent : public DataEvent {
   RandomDataEvent(DataEventConfig config, uint64_t rand_min, uint64_t rand_max)
       : DataEvent(std::move(config)), rand_min_(rand_min), rand_max_(rand_max) {}
 
-  astl_value_t Generate() override {
+  mock_scmi_value_t Generate() override {
     static std::random_device               rdev;
     static std::mt19937                     gen(rdev());
     std::uniform_int_distribution<uint64_t> dis(rand_min_, rand_max_);
     uint64_t                                value = dis(gen);
-    // TODO(ASTL-116) - Handle all other _astl_value_type_t
+    // TODO(ASTL-116): Handle all other mock_scmi_value_type_t values.
     last_value_.ui64 = value;  // NOLINT
     last_timestamp_  = std::chrono::system_clock::now();
     return last_value_;
@@ -53,7 +53,7 @@ class CsvDataEvent : public DataEvent {
   CsvDataEvent(DataEventConfig config, const std::string& csv_path, uint8_t column)
       : DataEvent(std::move(config)), csv_gen_(csv_path, column) {}
 
-  astl_value_t Generate() override {
+  mock_scmi_value_t Generate() override {
     auto str = csv_gen_.GenerateCSV();
     if (!str.empty()) {
       last_value_.ui64 = std::stoull(str);
@@ -81,19 +81,19 @@ inline std::vector<std::unique_ptr<DataEvent>> CreateTelemetryDataEvents(std::st
   for (const auto& data_event : data_events_json.at("data_events")) {
     const auto data_event_id = static_cast<data_event_id_t>(
         std::stoul(data_event["data_event_id"].get<std::string>(), nullptr, 16));  // NOLINT
-    const auto              enable            = static_cast<bool>(data_event["enable"]);
-    const auto              tstamp_enable     = static_cast<bool>(data_event["tstamp_enable"]);
-    const auto              last_value        = static_cast<astl_value_t>(data_event["last_value"]);  // NOLINT
-    const astl_value_type_t value_type        = ToValueType(data_event.at("value_type").get<std::string>());
-    const auto              last_timestamp    = std::chrono::system_clock::now();
-    const auto              compo_instance_id = static_cast<uint32_t>(data_event["compo_instance_id"]);
-    const auto              compo_type        = static_cast<uint32_t>(data_event["compo_type"]);
-    const auto              instance_id       = static_cast<uint32_t>(data_event["instance_id"]);
-    const auto              persistent        = static_cast<bool>(data_event["persistent"]);
-    const auto              tstamp_rate       = static_cast<uint32_t>(data_event["tstamp_rate"]);
-    const auto              type              = static_cast<uint32_t>(data_event["type"]);
-    const auto              unit              = static_cast<std::string>(data_event["unit"]);
-    const auto              unit_exp          = static_cast<std::string>(data_event["unit_exp"]);
+    const auto                   enable         = static_cast<bool>(data_event["enable"]);
+    const auto                   tstamp_enable  = static_cast<bool>(data_event["tstamp_enable"]);
+    const auto                   last_value     = static_cast<mock_scmi_value_t>(data_event["last_value"]);  // NOLINT
+    const mock_scmi_value_type_t value_type     = ToValueType(data_event.at("value_type").get<std::string>());
+    const auto                   last_timestamp = std::chrono::system_clock::now();
+    const auto                   compo_instance_id = static_cast<uint32_t>(data_event["compo_instance_id"]);
+    const auto                   compo_type        = static_cast<uint32_t>(data_event["compo_type"]);
+    const auto                   instance_id       = static_cast<uint32_t>(data_event["instance_id"]);
+    const auto                   persistent        = static_cast<bool>(data_event["persistent"]);
+    const auto                   tstamp_rate       = static_cast<uint32_t>(data_event["tstamp_rate"]);
+    const auto                   type              = static_cast<uint32_t>(data_event["type"]);
+    const auto                   unit              = static_cast<std::string>(data_event["unit"]);
+    const auto                   unit_exp          = static_cast<std::string>(data_event["unit_exp"]);
 
     std::optional<group_id_t> group_id = std::nullopt;
     if (data_event.contains("group_id")) {

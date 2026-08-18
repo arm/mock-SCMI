@@ -55,7 +55,7 @@ auto IsEventReadable(const TelemetryContext& context, const DataEvent& event) ->
 auto FormatEventSample(const DataEvent& event) -> std::string {
   std::string result = event.tstamp_enable_ ? std::to_string(event.GetScaledTimestamp()) + ": " : "0: ";
   result += std::format("0x{:04x} ", static_cast<unsigned int>(event.id_));
-  // TODO(ASTL-116): Handle all other astl_value_type_t values.
+  // TODO(ASTL-116): Handle all other mock_scmi_value_type_t values.
   result += std::format("{:016x} \n", event.last_value_.ui64);
   return result;
 }
@@ -128,7 +128,7 @@ auto ReadEventValue(const TelemetryContext& context) -> std::string {
   const auto now = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
   UpdateEventByInterval(event, now, ToMilliseconds(context.target.GetCurrentUpdateInterval()));
 
-  // TODO(ASTL-116): Handle all other astl_value_type_t values.
+  // TODO(ASTL-116): Handle all other mock_scmi_value_type_t values.
   const auto timestamp = event->tstamp_enable_ ? event->GetScaledTimestamp() : 0;
   return std::format("{} {:016x}\n", timestamp, event->last_value_.ui64);
 }

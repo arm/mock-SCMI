@@ -42,11 +42,11 @@ auto ReplyWith(const T& value) -> IoctlReply {
 
 template <typename T>
 auto ReadInput(const void* in_buf, size_t in_bufsz, T& value) -> bool {
-  if (in_buf == nullptr || in_bufsz < sizeof(T)) {
-    return false;
+  const bool valid = in_buf != nullptr && in_bufsz >= sizeof(T);
+  if (valid) {
+    std::memcpy(&value, in_buf, sizeof(T));
   }
-  std::memcpy(&value, in_buf, sizeof(T));
-  return true;
+  return valid;
 }
 
 auto ToDeviceName(std::string target_id) -> std::string {
@@ -54,13 +54,6 @@ auto ToDeviceName(std::string target_id) -> std::string {
     target_id.replace(3, 1, "_");
   }
   return target_id;
-}
-
-auto ToTargetId(std::string device_name) -> std::string {
-  if (device_name.starts_with("tlm_")) {
-    device_name.replace(3, 1, "-");
-  }
-  return device_name;
 }
 
 auto ParseDeImplementationUuid(const std::string& version) -> std::array<uint8_t, SCMI_TLM_DE_IMPL_UUID_SZ> {
@@ -86,25 +79,25 @@ auto ParseDeImplementationUuid(const std::string& version) -> std::array<uint8_t
   return bytes;
 }
 
-auto DataSize(astl_value_type_t value_type) -> uint32_t {
+auto DataSize(mock_scmi_value_type_t value_type) -> uint32_t {
   auto data_size = kDefaultDataSize;
   switch (value_type) {
-    case ASTL_VALUE_UINT8:
-    case ASTL_VALUE_BOOL8:
+    case MOCK_SCMI_VALUE_UINT8:
+    case MOCK_SCMI_VALUE_BOOL8:
       data_size = 1;
       break;
-    case ASTL_VALUE_UINT16:
+    case MOCK_SCMI_VALUE_UINT16:
       data_size = 2;
       break;
-    case ASTL_VALUE_UINT32:
-    case ASTL_VALUE_FLOAT32:
+    case MOCK_SCMI_VALUE_UINT32:
+    case MOCK_SCMI_VALUE_FLOAT32:
       data_size = 4;
       break;
-    case ASTL_VALUE_UINT64:
-    case ASTL_VALUE_FLOAT64:
+    case MOCK_SCMI_VALUE_UINT64:
+    case MOCK_SCMI_VALUE_FLOAT64:
       data_size = kUint64DataSize;
       break;
-    case ASTL_VALUE_UNKNOWN:
+    case MOCK_SCMI_VALUE_UNKNOWN:
       break;
   }
   return data_size;
@@ -194,7 +187,8 @@ auto GetDataEventConfig(const SCMITelemetryTarget& tlm, const DataEvent& data_ev
   if (data_event.enable_) {
     config.sid                     = SCMI_TLM_SHMTI_ID_INVALID;
     const auto implementation_uuid = ParseDeImplementationUuid(tlm.GetDEImplementationVersion());
-    std::ranges::copy(implementation_uuid, config.uuid);
+    auto       config_uuid         = std::span{config.uuid};
+    std::ranges::copy(implementation_uuid, config_uuid.begin());
   }
   return config;
 }
@@ -297,10 +291,9 @@ auto HandleGetAbiInfo(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bu
   if (in_bufsz < sizeof(scmi_tlm_abi_info)) {
     return {.error_code = EFAULT};
   }
-  const auto* bytes          = static_cast<const unsigned char*>(in_buf);
-  const auto  available_size = std::min(static_cast<size_t>(requested_size), in_bufsz);
-  if (std::ranges::any_of(std::span{bytes + sizeof(scmi_tlm_abi_info), available_size - sizeof(scmi_tlm_abi_info)},
-                          [](unsigned char byte) { return byte != 0; })) {
+  const auto available_size = std::min(static_cast<size_t>(requested_size), in_bufsz);
+  const auto input          = std::span{static_cast<const unsigned char*>(in_buf), available_size};
+  if (std::ranges::any_of(input.subspan(sizeof(scmi_tlm_abi_info)), [](unsigned char byte) { return byte != 0; })) {
     return {.error_code = EFAULT};
   }
 
@@ -345,12 +338,12 @@ auto HandleDataEventConfigBatch(SCMITelemetryTarget& tlm, const void* in_buf, si
   }
 
   std::vector<scmi_tlm_de_config> configs(batch.num_items);
-  const auto*                     bytes = static_cast<const char*>(in_buf);
-  std::memcpy(configs.data(), bytes + sizeof(batch), items_size);
+  const auto                      input = std::span{static_cast<const std::byte*>(in_buf), flattened_size};
+  std::memcpy(configs.data(), input.subspan(sizeof(batch), items_size).data(), items_size);
   std::vector<int32_t> states(batch.num_items);
 
   for (uint32_t index = 0; index < batch.num_items; ++index) {
-    DataEvent* data_event = tlm.GetDataEventById(configs[index].id);
+    auto* data_event = tlm.GetDataEventById(configs[index].id);
     if (data_event == nullptr) {
       if (batch.states == 0) {
         return {.error_code = EINVAL};
@@ -363,10 +356,11 @@ auto HandleDataEventConfigBatch(SCMITelemetryTarget& tlm, const void* in_buf, si
 
   IoctlReply reply{};
   reply.output.resize(flattened_size);
-  std::memcpy(reply.output.data(), &batch, sizeof(batch));
-  std::memcpy(reply.output.data() + sizeof(batch), configs.data(), items_size);
+  auto output = std::span{reply.output};
+  std::memcpy(output.data(), &batch, sizeof(batch));
+  std::memcpy(output.subspan(sizeof(batch), items_size).data(), configs.data(), items_size);
   if (states_size != 0) {
-    std::memcpy(reply.output.data() + sizeof(batch) + items_size, states.data(), states_size);
+    std::memcpy(output.subspan(sizeof(batch) + items_size, states_size).data(), states.data(), states_size);
   }
   return reply;
 }
@@ -444,9 +438,9 @@ auto InitProtocolScmiIoctl(FileSystemNode* g_root, const std::optional<std::stri
   }
 }
 
-auto HandleProtocolScmiIoctl(const FileSystemNode* node, unsigned int cmd, const void* in_buf, size_t in_bufsz)
+auto HandleProtocolScmiIoctl(const std::string& target_id, unsigned int cmd, const void* in_buf, size_t in_bufsz)
     -> IoctlReply {
-  auto& tlm = SCMITelemetryTarget::Instance(ToTargetId(node->GetName()));
+  auto& tlm = SCMITelemetryTarget::Instance(target_id);
 
   const auto handler = FindIoctlCommandHandler(cmd);
   if (handler == nullptr) {

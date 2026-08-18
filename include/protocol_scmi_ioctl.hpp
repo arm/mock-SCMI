@@ -21,7 +21,7 @@ struct IoctlReply {
 
 auto InitProtocolScmiIoctl(FileSystemNode* g_root, const std::optional<std::string>& config_file_path) -> void;
 
-auto HandleProtocolScmiIoctl(const FileSystemNode* node, unsigned int cmd, const void* in_buf, size_t in_bufsz)
+auto HandleProtocolScmiIoctl(const std::string& target_id, unsigned int cmd, const void* in_buf, size_t in_bufsz)
     -> IoctlReply;
 
 }  // namespace mock_scmi

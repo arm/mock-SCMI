@@ -11,4 +11,4 @@ MOUNT_POINT="${PWD}"
 	cd "${TEST_SCRATCH}"
 	"$1" "${MOUNT_POINT}/tlm_0"
 )
-find . -maxdepth 1 -type f | sort -u
+find . -maxdepth 1 \( -type f -o -type l \) | sort -u

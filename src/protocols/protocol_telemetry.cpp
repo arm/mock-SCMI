@@ -38,9 +38,9 @@ static auto ResolveTlmJsonPath(const std::optional<std::string>& cli_tlm_json_pa
     return *cli_tlm_json_path;
   }
 
-  const char* env = std::getenv("ASTL_MOCKSCMI_TLM_JSON_PATH");
+  const char* env = std::getenv("MOCK_SCMI_TLM_JSON_PATH");
   if (env == nullptr) {
-    throw std::runtime_error("ASTL_MOCKSCMI_TLM_JSON_PATH environment variable is not set.");
+    throw std::runtime_error("MOCK_SCMI_TLM_JSON_PATH environment variable is not set.");
   }
 
   return env;
@@ -195,7 +195,7 @@ auto BuildTelemetryDesFiles(SCMITelemetryTarget const& tlm, FileSystemNode* tele
                                                    FileAccess::READ_WRITE, event_dir.get(),
                                                    ProtocolType::SCMI_SYSFS_TELEMETRY));
 
-    // TODO(ASTL-116) - Handle all other _astl_value_type_t
+    // TODO(ASTL-116): Handle all other mock_scmi_value_type_t values.
     event_dir->AddChild(FileSystemNode::CreateFile(
         "value", std::format("{} {:016x}\n", data_event->GetScaledTimestamp(), data_event->last_value_.ui64),
         FileAccess::READ_ONLY, event_dir.get(), ProtocolType::SCMI_SYSFS_TELEMETRY));

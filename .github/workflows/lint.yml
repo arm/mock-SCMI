@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: Copyright 2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Lint
+
+permissions:
+  actions: read
+  contents: read
+  checks: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Qlty
+        uses: qltysh/qlty-action/install@v2.3.0
+
+      - name: Install tools
+        run: |
+          APT_OPTIONS=(
+            -o DPkg::Lock::Timeout=300
+            -o Acquire::Retries=3
+            -o Acquire::http::Timeout=30
+            -o Acquire::https::Timeout=30
+          )
+          sudo apt-get "${APT_OPTIONS[@]}" update
+          sudo apt-get "${APT_OPTIONS[@]}" install -y \
+            clang-20 clang-format-20 clang-tidy-20 cppcheck cmake \
+            fuse3 jq libfuse3-dev pkg-config python3-pip shellcheck yamllint
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-20 200
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-20 200
+          sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-20 200
+          sudo update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-20 200
+          python3 -m pip install --upgrade --break-system-packages --user cmakelang reuse
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Configure
+        run: >-
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: YAML lint
+        run: find .github -type f \( -iname '*.yml' -o -iname '*.yaml' \) -print0 | xargs -0 yamllint
+
+      - name: Check formatting
+        run: ./scripts/check_format.sh
+
+      - name: Cppcheck
+        run: ./scripts/cppcheck.sh build
+
+      - name: Check license headers
+        run: ./scripts/license_lint.sh
+
+      - name: Clang-tidy
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: HEAD
+        run: ./scripts/lint.sh build pull-request
+
+      - name: CMake lint
+        run: ./scripts/cmakelang.sh
+
+      - name: Qlty
+        run: qlty check --all --no-fix

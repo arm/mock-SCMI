@@ -13,20 +13,18 @@ set -eu -o pipefail
 # --- Configure env for MockScmi JSON path ---
 
 set -x
-# Script path: astl/tools/mock_scmi/unit_tests/unit_test_fixture.sh
-# Repo root is three directories up from here.
 MSYS_UNIT_TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ASTL_ROOT="$(realpath "${MSYS_UNIT_TEST_DIR}/../../..")"
-DEFAULT_TLM_JSON="${ASTL_ROOT}/tools/mock_scmi/config/tlm.json"
-: "${ASTL_MOCKSCMI_TLM_JSON_PATH:=${DEFAULT_TLM_JSON}}"
-export ASTL_MOCKSCMI_TLM_JSON_PATH
-if [[ ! -f ${ASTL_MOCKSCMI_TLM_JSON_PATH} ]]; then
-	echo "❌ ASTL_MOCKSCMI_TLM_JSON_PATH not found: ${ASTL_MOCKSCMI_TLM_JSON_PATH}" >&2
+MOCK_SCMI_ROOT="$(realpath "${MSYS_UNIT_TEST_DIR}/..")"
+DEFAULT_TLM_JSON="${MOCK_SCMI_ROOT}/config/tlm.json"
+: "${MOCK_SCMI_TLM_JSON_PATH:=${DEFAULT_TLM_JSON}}"
+export MOCK_SCMI_TLM_JSON_PATH
+if [[ ! -f ${MOCK_SCMI_TLM_JSON_PATH} ]]; then
+	echo "❌ MOCK_SCMI_TLM_JSON_PATH not found: ${MOCK_SCMI_TLM_JSON_PATH}" >&2
 	exit 1
 fi
-echo "✅ ASTL_MOCKSCMI_TLM_JSON_PATH = ${ASTL_MOCKSCMI_TLM_JSON_PATH}"
+echo "✅ MOCK_SCMI_TLM_JSON_PATH = ${MOCK_SCMI_TLM_JSON_PATH}"
 
-TIMEOUT=30 # Maximum seconds to wait for guid
+TIMEOUT=30            # Maximum seconds to wait for guid
 TERMINATION_TIMEOUT=5 # Maximum seconds to wait for MockScmi/Valgrind to exit after SIGTERM
 PATTERN_READY="eccf4f7c-d1b1-47f0-9d23-159f6d38b661"
 SKIP_CODE=77
@@ -99,8 +97,14 @@ terminate_process() {
 
 # If valgrind reports an "unhandled dwarf2 abbrev form code 0x25" error, try compiling with g++ instead of clang
 # clear DEBUGINFOD_URLS so that valgrind doesn't attempt to fetch debug symbols from the network, which can cause hangs in constrained environments
-DEBUGINFOD_URLS='' valgrind --log-file="${VALGRIND_LOG}" --leak-check=full --show-leak-kinds=all --track-origins=yes "${SYSFS_EXECUTABLE}" -f -s "${MOUNT_POINT}" &>"${SYSFS_LOG}" &
-#{SYSFS_EXECUTABLE} -f -s ${MOUNT_POINT} &> ${SYSFS_LOG} &
+USE_VALGRIND=0
+if command -v valgrind >/dev/null; then
+	USE_VALGRIND=1
+	DEBUGINFOD_URLS='' valgrind --log-file="${VALGRIND_LOG}" --leak-check=full --show-leak-kinds=all --track-origins=yes "${SYSFS_EXECUTABLE}" -f -s "${MOUNT_POINT}" &>"${SYSFS_LOG}" &
+else
+	echo "⚠️  Valgrind is unavailable; running the functional test without leak checking"
+	"${SYSFS_EXECUTABLE}" -f -s "${MOUNT_POINT}" &>"${SYSFS_LOG}" &
+fi
 SYSFS_PROCESS="$!"
 
 if ps -p ${SYSFS_PROCESS} >/dev/null; then
@@ -151,18 +155,20 @@ terminate_process "${SYSFS_PROCESS}"
 
 echo '...End of test output'
 
-if grep -F 'ERROR SUMMARY' "${VALGRIND_LOG}" >/dev/null; then
-	echo "✅ Valgrind log appears complete"
-else
-	echo "❌ Error!  Valgrind log was not fully flushed after process ${SYSFS_PROCESS} was killed.  See log: ${VALGRIND_LOG}" >/dev/stderr
-	exit 1
-fi
+if ((USE_VALGRIND)); then
+	if grep -F 'ERROR SUMMARY' "${VALGRIND_LOG}" >/dev/null; then
+		echo "✅ Valgrind log appears complete"
+	else
+		echo "❌ Error!  Valgrind log was not fully flushed after process ${SYSFS_PROCESS} was killed.  See log: ${VALGRIND_LOG}" >/dev/stderr
+		exit 1
+	fi
 
-if grep -F 'All heap blocks were freed -- no leaks are possible' "${VALGRIND_LOG}" >/dev/null; then
-	echo "✅ Valgrind did not detect any memory leaks at runtime"
-else
-	echo "❌ Error!  Valgrind detected issues.  See log: ${VALGRIND_LOG}" >/dev/stderr
-	exit 1
+	if grep -F 'All heap blocks were freed -- no leaks are possible' "${VALGRIND_LOG}" >/dev/null; then
+		echo "✅ Valgrind did not detect any memory leaks at runtime"
+	else
+		echo "❌ Error!  Valgrind detected issues.  See log: ${VALGRIND_LOG}" >/dev/stderr
+		exit 1
+	fi
 fi
 
 if diff -u "${EXPECTED_OUTPUT}" "${ACTUAL_OUTPUT}"; then

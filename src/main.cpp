@@ -46,7 +46,7 @@ auto ToTlmJsonPath(const MockScmiOptions& options) -> std::optional<std::string>
 auto PrintMockScmiHelp() -> void {
   std::cout << "    -t FILE\n";
   std::cout << "    --tlm-json-path FILE  path to the MockScmi telemetry JSON configuration\n";
-  std::cout << "    ASTL_SCMI_INTERFACE selects backend: sysfs/auto for the FUSE tree, ioctl for tlm_N devices\n";
+  std::cout << "    MOCK_SCMI_INTERFACE selects backend: sysfs/auto for the FUSE tree, ioctl for tlm_N devices\n";
 }
 
 }  // namespace

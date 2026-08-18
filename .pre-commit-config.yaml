@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: Copyright 2026 Arm Limited and/or its affiliates <open-source-office@arm.com>
+# SPDX-License-Identifier: Apache-2.0
+
+default_install_hook_types: [pre-commit]
+
+repos:
+  - repo: local
+    hooks:
+      - id: format-staged
+        name: format staged files
+        entry: ./scripts/format.sh --staged
+        language: system
+        pass_filenames: false
+        always_run: true
+        fail_fast: true
+      - id: qlty-check
+        name: qlty check
+        entry: qlty check --no-fix
+        language: system
+      - id: license-lint
+        name: license lint
+        entry: ./scripts/license_lint.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: cppcheck
+        name: cppcheck
+        entry: ./scripts/cppcheck.sh build
+        language: system
+        pass_filenames: false
+        files: '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$'
+      - id: cmake-lint
+        name: cmake lint
+        entry: ./scripts/cmakelang.sh
+        language: system
+        files: '(\.cmake|CMakeLists\.txt)$'

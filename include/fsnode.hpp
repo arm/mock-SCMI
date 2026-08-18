@@ -146,12 +146,12 @@ class FileSystemNode {
 
  private:
   struct Config {
-    std::string           name;
-    NodeType              type;
-    mode_t                mode;
-    const FileSystemNode* parent;
-    ProtocolType          protocol;
-    std::string           file_content;
+    std::string           name{};  // NOLINT(readability-redundant-member-init)
+    NodeType              type{NodeType::FILE_NODE};
+    mode_t                mode{};
+    const FileSystemNode* parent{nullptr};
+    ProtocolType          protocol{ProtocolType::NONE};
+    std::string           file_content{};  // NOLINT(readability-redundant-member-init)
   };
 
   std::string name_;  // The name of the node

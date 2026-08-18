@@ -12,7 +12,7 @@
 
 namespace mock_scmi {
 
-constexpr const char* kScmiInterfaceEnvVar = "ASTL_SCMI_INTERFACE";
+constexpr const char* kScmiInterfaceEnvVar = "MOCK_SCMI_INTERFACE";
 
 enum class ScmiBackendPreference {
   AUTO,

@@ -13,6 +13,16 @@
 #include "protocol_telemetry.hpp"  // Contains InitProtocolTelemetry() and HandleProtocolTelemetry()
 
 namespace mock_scmi {
+namespace {
+
+auto TargetIdFromDeviceName(std::string device_name) -> std::string {
+  if (device_name.starts_with("tlm_")) {
+    device_name.replace(3, 1, "-");
+  }
+  return device_name;
+}
+
+}  // namespace
 
 auto InitProtocol(FileSystemNode* g_root, const std::optional<std::string>& config_file_path) -> void {
   // Initialize additional protocols here
@@ -58,7 +68,7 @@ auto HandleProtocolIoctl(const FileSystemNode* node, unsigned int cmd, const voi
     -> IoctlReply {
   switch (node->GetProtocol()) {
     case ProtocolType::SCMI_IOCTL_TELEMETRY:
-      return HandleProtocolScmiIoctl(node, cmd, in_buf, in_bufsz);
+      return HandleProtocolScmiIoctl(TargetIdFromDeviceName(node->GetName()), cmd, in_buf, in_bufsz);
 
     default:
       std::cerr << "No ioctl handler for protocol." << '\n';
