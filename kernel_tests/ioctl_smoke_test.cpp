@@ -281,13 +281,15 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  scmi_tlm_des_list des_list{};
+  scmi_tlm_batch des_list{};
+  des_list.item_sz = sizeof(scmi_tlm_de_info);
   if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_GET_DE_LIST, &des_list, "unsupported_get_de_list", ENOTTY)) {
     close(file_descriptor);
     return 1;
   }
 
-  scmi_tlm_grps_list groups_list{};
+  scmi_tlm_batch groups_list{};
+  groups_list.item_sz = sizeof(scmi_tlm_grp_info);
   if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_GET_GRP_LIST, &groups_list, "unsupported_get_group_list", ENOTTY)) {
     close(file_descriptor);
     return 1;
@@ -314,7 +316,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  scmi_tlm_shmtis_list shmtis_list{};
+  scmi_tlm_batch shmtis_list{};
+  shmtis_list.item_sz = sizeof(scmi_tlm_shmti_info);
   if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_GET_SHMTI_LIST, &shmtis_list, "unsupported_get_shmti_list",
                          ENOTTY)) {
     close(file_descriptor);
