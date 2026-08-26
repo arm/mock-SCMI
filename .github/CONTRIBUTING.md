@@ -14,21 +14,22 @@ There are multiple ways you can contribute to this project:
 
 1. **Report an Issue or make a feature request**
    If you encounter a bug, have a suggestion or would like to make a feature request,
-   please open an ticket on our
-   [Jira project](https://jira.arm.com/browse/ASTL)
-   to report bug or make a feature request.
+   please open a [GitHub issue](https://github.com/Arm/mock-SCMI/issues).
 
 2. **Open a Pull Request**: Contributions are welcome, whether you're fixing a bug, adding a new feature, or improving
    documentation. You can submit a pull request to our
-   [GitHub repository](https://github.com/Arm-Debug/mock-SCMI/pulls) to:
+   [canonical GitHub repository](https://github.com/Arm-Debug/mock-SCMI/pulls) to:
    - Provide a bug fix
    - Add new features or enhancements
    - Improve or expand existing documentation
 
+   Accepted changes are mirrored to the public
+   [Arm/mock-SCMI repository](https://github.com/Arm/mock-SCMI).
+
 ### Report an Issue or Make a Feature Request
 
-Please feel free to open a ticket on our [Jira project](https://jira.arm.com/browse/ASTL)
-to report misbehavior (i.e. bugs)
+Please open a [GitHub issue](https://github.com/Arm/mock-SCMI/issues) to report
+misbehavior such as bugs.
 
 Issues are your best way to interact directly with the maintenance team and the community.
 We encourage you to append implementation suggestions as this helps to decrease the
@@ -48,7 +49,7 @@ To make a successful contribution, please follow these steps:
 
 1. **Clone the Repository**: Start by cloning the repository.
 
-2. **Create a Private Branch**: Name your branch with the following format: <user-name>/<change-name>
+2. **Create a Topic Branch**: Name your branch with the following format: <user-name>/<change-name>
 
 3. **Make Your Changes**:
    - Implement your changes, ensuring that you match the existing coding style and documentation conventions.
@@ -56,6 +57,9 @@ To make a successful contribution, please follow these steps:
 
 4. **Write a Clear Commit Message**:
    Write a concise and informative commit message summarizing your changes.
+   Use only public product names, public test data, and public links. Do not include
+   internal hostnames, confidential codenames, private issue links, or non-public
+   configuration details in commits or pull requests.
 
 5. **Push to your Branch**: Push your changes to your branch.
 
