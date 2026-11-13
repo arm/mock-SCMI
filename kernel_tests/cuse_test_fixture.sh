@@ -49,10 +49,14 @@ MOCK_SCMI_INTERFACE=ioctl \
 
 export TEST_SCRATCH="$TMP_DIR/scratch"
 mkdir "$TEST_SCRATCH"
-(
+if ! (
 	cd "$MOUNT_POINT"
 	bash "$TEST_DIR/ioctl_backend/command.sh" "$SMOKE_TEST"
-) >"$ACTUAL_OUTPUT" 2>&1
+) >"$ACTUAL_OUTPUT" 2>&1; then
+	cat "$ACTUAL_OUTPUT"
+	cat "$SCMI_LOG"
+	exit 1
+fi
 
 diff -u "$EXPECTED_OUTPUT" "$ACTUAL_OUTPUT"
 echo "CUSE ioctl smoke test passed"

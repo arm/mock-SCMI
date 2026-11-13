@@ -124,6 +124,25 @@ auto RequestTopLevelArgument(fuse_req_t request, unsigned int command, void* arg
   return true;
 }
 
+auto RequestAbiInfoExtension(fuse_req_t request, unsigned int command, void* argument, const void* input,
+                             size_t input_size) -> bool {
+  if (command != SCMI_TLM_GET_ABI_INFO || input_size < sizeof(uint32_t)) {
+    return false;
+  }
+
+  uint32_t requested_size{};
+  std::memcpy(&requested_size, input, sizeof(requested_size));
+  if (requested_size <= input_size) {
+    return false;
+  }
+
+  // ABI V1 uses the caller's size to validate and zero any future extension bytes.
+  // The initial ioctl retry only copies the fixed-size structure encoded in the command.
+  const iovec buffer{.iov_base = argument, .iov_len = requested_size};
+  fuse_reply_ioctl_retry(request, &buffer, 1, &buffer, 1);
+  return true;
+}
+
 auto RequestBatchPointers(fuse_req_t request, unsigned int command, void* argument, const void* input,
                           size_t input_size) -> bool {
   if ((command != SCMI_TLM_GET_DE_CFG && command != SCMI_TLM_SET_DE_CFG) || input_size != sizeof(scmi_tlm_batch)) {
@@ -178,7 +197,8 @@ auto CuseIoctl(fuse_req_t request, int command, void* argument, fuse_file_info* 
       RequestTopLevelArgument(request, static_cast<unsigned int>(command), argument)) {
     return;
   }
-  if (RequestBatchPointers(request, static_cast<unsigned int>(command), argument, input, input_size)) {
+  if (RequestAbiInfoExtension(request, static_cast<unsigned int>(command), argument, input, input_size) ||
+      RequestBatchPointers(request, static_cast<unsigned int>(command), argument, input, input_size)) {
     return;
   }
 

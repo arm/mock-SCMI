@@ -61,7 +61,7 @@ static void LowLevelLookup(fuse_req_t req, fuse_ino_t parent, const char* name) 
   std::cout << "lookup: parent=" << parent << ", name=" << name << std::endl;
   FuseUserData* fuse_user_data = static_cast<FuseUserData*>(fuse_req_userdata(req));
 
-  FileSystemNode* parent_node = FindNodeByIno(fuse_user_data->root.get(), parent);
+  const FileSystemNode* parent_node = FindNodeByIno(fuse_user_data->root.get(), parent);
   if (!parent_node) {
     fuse_reply_err(req, ENOENT);
     return;

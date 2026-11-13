@@ -116,6 +116,13 @@ int main(int argc, char** argv) {
   std::cout << std::format("abi_info_future driver_size={} abi_version={}\n", future_abi_info.v1.size,
                            future_abi_info.v1.abi_version);
 
+  future_abi_info.v1.size      = sizeof(future_abi_info);
+  future_abi_info.future_field = 1;
+  if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_GET_ABI_INFO, &future_abi_info, "abi_info_nonzero_tail", E2BIG)) {
+    close(file_descriptor);
+    return 1;
+  }
+
   scmi_tlm_abi_info too_small_abi_info{};
   too_small_abi_info.size = sizeof(uint32_t);
   if (!RunIoctlExpectErr(file_descriptor, SCMI_TLM_GET_ABI_INFO, &too_small_abi_info, "abi_info_too_small", EINVAL)) {

@@ -97,13 +97,10 @@ CSVDataGenerator::CSVDataGenerator(const std::string& csv_path, uint8_t column) 
     if (tokens.size() <= column) {
       continue;
     }
-    std::string ts_str   = tokens[0];
-    std::string data_str = tokens[column];
-
     try {
-      uint64_t ts_uint64 = std::stoull(ts_str);
+      const auto ts_uint64 = std::stoull(tokens[0]);
       timestamps_.push_back(ts_uint64);
-      data_.push_back(data_str);
+      data_.push_back(tokens[column]);
     } catch (...) {
       // skip malformed
     }

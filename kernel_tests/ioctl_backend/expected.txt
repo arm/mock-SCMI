@@ -1,5 +1,6 @@
 abi_info size=56 abi_version=1 abi_features=0x00000038 features=0x00000000 de_impl=CAFEBABECAFEBABECAFEBABEBEEF0000 num_des=7
 abi_info_future driver_size=56 abi_version=1
+abi_info_nonzero_tail errno=7
 abi_info_too_small errno=22
 cfg enable=1 t_enable=1 active=1,0
 cfg_after_disable enable=0 t_enable=1

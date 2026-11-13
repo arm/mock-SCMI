@@ -271,9 +271,11 @@ class SCMITelemetryTarget {
 
   /**
    * @brief Gets the available update intervals in milliseconds.
-   * @return Vector of available update intervals.
+   * @return Reference to the target's available update intervals.
    */
-  auto GetAvailableUpdateIntervals() const -> std::vector<update_interval_t> { return intervals_.update_intervals; }
+  auto GetAvailableUpdateIntervals() const -> const std::vector<update_interval_t>& {
+    return intervals_.update_intervals;
+  }
 
   /**
    * @brief Checks if the available update intervals are defined as a discrete set.

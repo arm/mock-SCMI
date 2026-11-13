@@ -294,7 +294,7 @@ auto HandleGetAbiInfo(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bu
   const auto available_size = std::min(static_cast<size_t>(requested_size), in_bufsz);
   const auto input          = std::span{static_cast<const unsigned char*>(in_buf), available_size};
   if (std::ranges::any_of(input.subspan(sizeof(scmi_tlm_abi_info)), [](unsigned char byte) { return byte != 0; })) {
-    return {.error_code = EFAULT};
+    return {.error_code = E2BIG};
   }
 
   const auto abi_info = BuildAbiInfo(tlm);
@@ -304,8 +304,8 @@ auto HandleGetAbiInfo(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bu
   return reply;
 }
 
-// cppcheck-suppress constParameterReference // Ioctl handlers share a callback
-// signature with mutating handlers.
+// Ioctl handlers share a callback signature with mutating handlers.
+// cppcheck-suppress [constParameterReference, constParameterCallback]
 auto HandleGetConfig(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz) -> IoctlReply {
   (void)in_buf;
   (void)in_bufsz;
@@ -386,8 +386,8 @@ auto HandleGetDataEventValue(SCMITelemetryTarget& tlm, const void* in_buf, size_
                                            });
 }
 
-// cppcheck-suppress constParameterReference // Ioctl handlers share a callback
-// signature with mutating handlers.
+// Ioctl handlers share a callback signature with mutating handlers.
+// cppcheck-suppress [constParameterReference, constParameterCallback]
 auto HandleGetAllConfig(SCMITelemetryTarget& tlm, const void* in_buf, size_t in_bufsz) -> IoctlReply {
   (void)in_buf;
   (void)in_bufsz;

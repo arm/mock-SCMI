@@ -77,6 +77,15 @@ install(TARGETS MockScmi MockScmiCuse RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR
 install(DIRECTORY config/ DESTINATION ${CMAKE_INSTALL_DATADIR}/mock_scmi)
 
 if(BUILD_TESTING)
+  add_executable(MockScmiAbiInfoTest kernel_tests/ioctl_abi_info_test.cpp src/fuse_transport/fsnode.cpp
+                                     ${MOCK_SCMI_PROTOCOL_SOURCES})
+  target_compile_features(MockScmiAbiInfoTest PRIVATE cxx_std_20)
+  target_compile_definitions(MockScmiAbiInfoTest PRIVATE FUSE_USE_VERSION=316)
+  target_include_directories(MockScmiAbiInfoTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_link_libraries(MockScmiAbiInfoTest PRIVATE PkgConfig::FUSE3 nlohmann_json::nlohmann_json)
+  add_test(NAME toolsMockScmiAbiInfo COMMAND MockScmiAbiInfoTest ${CMAKE_CURRENT_SOURCE_DIR}/config/tlm.json)
+  set_tests_properties(toolsMockScmiAbiInfo PROPERTIES LABELS "mockscmi")
+
   add_executable(MockScmiIoctlSmokeTest ${CMAKE_CURRENT_SOURCE_DIR}/kernel_tests/ioctl_smoke_test.cpp)
   target_compile_features(MockScmiIoctlSmokeTest PRIVATE cxx_std_20)
   target_include_directories(MockScmiIoctlSmokeTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
